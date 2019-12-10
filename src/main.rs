@@ -9,14 +9,32 @@ struct Token {
     signature: Vec<u8>
 }
 
+fn parse_base64_string (s: &str) -> Result<&str, &str> {
+    match base64::decode(s) {
+        Ok(s) => match str::from_utf8(&s) {
+            Ok(s) => Ok(s),
+            Err(e) => return Err("cannot be decoded to a valid UTF-8 string")
+        },
+        Err(e) => return Err("is not a valid base64 string")
+    }
+}
+
 fn parse_jwt_token (token: &str) -> Result<&Token, &str> {
     let parts : Vec<&str> = token.split('.').collect();
     let header = match parts.get(0) {
-        Some(s) => match base64::decode(s) {
-            Ok(s) => str::from_utf8(&s)?,
-            Err(e) => return Error("Malformed JWT: Header is not a valid base64 string")
+        Some(s) => match parse_base64_string(s) {
+            Ok(s) => s,
+            Err(e) => return Err(&format!("Malformed JWT: Header {}", e))
         },
-        None() => return Error("Malformed JWT: Header is missing")
+        None => return Err("Malformed JWT: Header is missing")
+    };
+
+    let body = match parts.get(1) {
+        Some(s) => match parse_base64_string(s) {
+            Ok(s) => s,
+            Err(e) => return Err(&format!("Malformed JWT: Body {}", e))
+        },
+        None => return Err("Malformed JWT: Body is missing")
     };
 
     // TODO
