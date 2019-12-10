@@ -1,0 +1,11 @@
+[package]
+name = "jwtcrack"
+version = "0.1.0"
+authors = ["Luciano Mammino <lmammino@vectra.ai>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+frank_jwt = "3.1.2"
+base64 = "0.11.0"
