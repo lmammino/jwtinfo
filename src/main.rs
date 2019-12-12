@@ -4,6 +4,9 @@ use std::str;
 use base64;
 use serde::Deserialize;
 
+#[macro_use]
+extern crate lazy_static;
+
 #[derive(Deserialize, Debug)]
 struct JWTHeader {
     typ: String,
@@ -11,55 +14,63 @@ struct JWTHeader {
 }
 
 #[derive(Debug)]
-struct JWTToken<'a> {
-    header: &'a JWTHeader,
-    body: &'a str,
+struct JWTToken {
+    header: JWTHeader,
+    body: String,
     signature: Vec<u8>
 }
 
-impl<'a> JWTToken<'a> {
-    pub fn new(header: &'a JWTHeader, body: &'a str, signature: Vec<u8>) -> Self {
+lazy_static! {
+    static ref BASE64_CONFIG: base64::Config = base64::Config::new(base64::CharacterSet::UrlSafe, false);
+}
+
+impl JWTToken {
+    pub fn new(header: JWTHeader, body: String, signature: Vec<u8>) -> Self {
         JWTToken { header, body, signature }
     }
 }
 
-fn parse_base64_string (s: &str) -> Result<&str, &str> {
-    match base64::decode(s) {
+fn parse_base64_string (s: &str) -> Result<String, String> {
+    match base64::decode_config(s, *BASE64_CONFIG) {
         Ok(s) => match str::from_utf8(&s) {
-            Ok(s) => Ok(s),
-            Err(e) => return Err("cannot be decoded to a valid UTF-8 string")
+            Ok(s) => Ok(s.to_string()),
+            Err(e) => return Err(format!("cannot be decoded to a valid UTF-8 string. {}", e))
         },
-        Err(e) => return Err("is not a valid base64 string")
+        Err(e) => return Err(format!("is not a valid base64 string. {}", e))
     }
 }
 
-fn parse_jwt_token (token: &str) -> Result<&JWTToken, &str> {
+fn parse_jwt_token (token: &str) -> Result<JWTToken, String> {
     let parts : Vec<&str> = token.split('.').collect();
     let header_str = match parts.get(0) {
         Some(s) => match parse_base64_string(s) {
             Ok(s) => s,
-            Err(e) => return Err(&format!("Malformed JWT: Header {}", e))
+            Err(e) => return Err(format!("Malformed JWT: Header {}", e))
         },
-        None => return Err("Malformed JWT: Header is missing")
+        None => return Err("Malformed JWT: Header is missing".to_string())
     };
-    let header: JWTHeader = match serde_json::from_str(header_str) {
+    let header: JWTHeader = match serde_json::from_str(&header_str) {
         Ok(h) => h,
-        Err(e) => return Err("Malformed JWT: Header is not a valid JSON")
+        Err(e) => return Err(format!("Malformed JWT: Header is not a valid JSON. {}", e))
     };
 
     let body = match parts.get(1) {
         Some(s) => match parse_base64_string(s) {
             Ok(s) => s,
-            Err(e) => return Err(&format!("Malformed JWT: Body {}", e))
+            Err(e) => return Err(format!("Malformed JWT: Body {}", e))
         },
-        None => return Err("Malformed JWT: Body is missing")
+        None => return Err("Malformed JWT: Body is missing".to_string())
     };
 
-    // TODO
-    // x JSON parse header
-    // x parse body
-    // parse signature
-    // return new Token instance
+    let signature = match parts.get(2) {
+        Some(s) => match base64::decode_config(s, *BASE64_CONFIG) {
+            Ok(v) => v,
+            Err(e) => return Err(format!("Malformed JWT: cannot decode signature from base64. {}", e))
+        },
+        None => return Err("Malformed JWT: Missing signature".to_string())
+    };
+
+    Ok(JWTToken::new(header, body, signature))
 }
 
 fn main() {
@@ -70,6 +81,13 @@ fn main() {
         process::exit(1);
     }
     let token = token_wrap.unwrap();
+    let jwt_token = match parse_jwt_token(token) {
+        Ok(t) => t,
+        Err(e) => {
+            eprintln!("{}", e);
+            process::exit(1);
+        }
+    };
 
-    println!("provided token: {}", token);
+    println!("provided token: {:?}", jwt_token);
 }
