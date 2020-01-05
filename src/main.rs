@@ -22,5 +22,5 @@ fn main() {
         }
     };
 
-    println!("provided token: {:?}", jwt_token);
+    println!("{}", jwt_token.body);
 }

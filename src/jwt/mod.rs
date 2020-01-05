@@ -10,14 +10,14 @@ lazy_static! {
 #[derive(Deserialize, Debug)]
 pub struct Header {
   typ: String,
-  alg: String,
+  pub alg: String,
 }
 
 #[derive(Debug)]
 pub struct Token {
-  header: Header,
-  body: String,
-  signature: Vec<u8>,
+  pub header: Header,
+  pub body: String,
+  pub signature: Vec<u8>,
 }
 
 impl Token {
