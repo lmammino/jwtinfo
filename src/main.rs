@@ -2,7 +2,7 @@ use std::env;
 use std::process;
 
 #[macro_use]
-pub extern crate lazy_static;
+extern crate lazy_static;
 
 mod jwt;
 
