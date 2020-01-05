@@ -14,7 +14,7 @@ fn main() {
         process::exit(1);
     }
     let token = token_wrap.unwrap();
-    let jwt_token = match jwt::parse_jwt_token(token) {
+    let jwt_token = match jwt::parse_token(token) {
         Ok(t) => t,
         Err(e) => {
             eprintln!("{}", e);

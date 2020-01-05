@@ -40,7 +40,7 @@ fn parse_base64_string(s: &str) -> Result<String, String> {
   }
 }
 
-pub fn parse_jwt_token(token: &str) -> Result<Token, String> {
+pub fn parse_token(token: &str) -> Result<Token, String> {
   let parts: Vec<&str> = token.split('.').collect();
   let header_str = match parts.get(0) {
     Some(s) => match parse_base64_string(s) {
@@ -77,3 +77,6 @@ pub fn parse_jwt_token(token: &str) -> Result<Token, String> {
 
   Ok(Token::new(header, body, signature))
 }
+
+#[cfg(test)]
+mod test;
