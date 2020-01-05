@@ -1,4 +1,4 @@
-use std::env;
+use clap::{App, Arg};
 use std::process;
 
 #[macro_use]
@@ -7,20 +7,23 @@ extern crate lazy_static;
 mod jwt;
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
-    let token_wrap = args.get(1);
-    if token_wrap.is_none() {
-        eprintln!("Error: Missing JWT token. Pass it as first command line argument");
-        process::exit(1);
-    }
-    let token = token_wrap.unwrap();
-    let jwt_token = match jwt::parse_token(token) {
-        Ok(t) => t,
-        Err(e) => {
-            eprintln!("{}", e);
-            process::exit(1);
-        }
-    };
+  let matches = App::new("jwtinfo")
+    .version("0.1.0")
+    .about("Shows information about a JWT token")
+    .arg(Arg::with_name("token")
+      .help("the JWT token as a string")
+      .required(true)
+      .index(1))
+    .get_matches();
 
-    println!("{}", jwt_token.body);
+  let token = matches.value_of("token").unwrap();
+  let jwt_token = match jwt::parse_token(token) {
+    Ok(t) => t,
+    Err(e) => {
+      eprintln!("{}", e);
+      process::exit(1);
+    }
+  };
+
+  println!("{}", jwt_token.body);
 }
