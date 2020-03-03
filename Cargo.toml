@@ -1,8 +1,10 @@
 [package]
 name = "jwtinfo"
+description = "Command line tool to get information about JWT tokens"
 version = "0.1.0"
 authors = ["Luciano Mammino", "Stefano Abalsamo"]
 edition = "2018"
+license = "MIT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
