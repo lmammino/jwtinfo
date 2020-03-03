@@ -17,4 +17,4 @@ jobs:
       if: github.ref == 'refs/heads/master'
       run: |
         cargo login ${{ secrets.CARGO_TOKEN }}
-        cargo publish --dry-run
+        cargo publish
