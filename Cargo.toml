@@ -1,12 +1,14 @@
 [package]
 name = "jwtinfo"
 description = "Command line tool to get information about JWT tokens"
-version = "0.1.0"
+categories = ["command-line-interface", "command-line-utilities", "cryptography", "development-tools", "development-tools::debugging"]
+repository = "https://github.com/lmammino/jwtinfo"
+documentation = "https://github.com/lmammino/jwtinfo"
+readme = "README.md"
+version = "0.1.1"
 authors = ["Luciano Mammino", "Stefano Abalsamo"]
 edition = "2018"
 license = "MIT"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 clap = "2.33.0"
