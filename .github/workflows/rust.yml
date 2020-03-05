@@ -9,6 +9,9 @@ jobs:
       run: |
         rustup component add clippy
         cargo clippy --all-targets --all-features -- -D warnings
+    - name: Rustfmt
+      run: |
+        cargo fmt -- --check
     - name: Build
       run: cargo build --verbose
     - name: Run tests
