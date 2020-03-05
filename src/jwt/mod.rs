@@ -34,9 +34,9 @@ fn parse_base64_string(s: &str) -> Result<String, String> {
   match base64::decode_config(s, *BASE64_CONFIG) {
     Ok(s) => match str::from_utf8(&s) {
       Ok(s) => Ok(s.to_string()),
-      Err(e) => return Err(format!("cannot be decoded to a valid UTF-8 string. {}", e)),
+      Err(e) => Err(format!("cannot be decoded to a valid UTF-8 string. {}", e)),
     },
-    Err(e) => return Err(format!("is not a valid base64 string. {}", e)),
+    Err(e) => Err(format!("is not a valid base64 string. {}", e)),
   }
 }
 
