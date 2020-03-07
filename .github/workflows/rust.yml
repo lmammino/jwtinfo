@@ -1,38 +1,60 @@
 name: Rust
+
 on: [push]
+
 jobs:
-  build:
+
+  linting:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - name: Cache cargo registry
-      uses: actions/cache@v1
-      with:
-        path: ~/.cargo/registry
-        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-    - name: Cache cargo index
-      uses: actions/cache@v1
-      with:
-        path: ~/.cargo/git
-        key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
-    - name: Cache cargo build
-      uses: actions/cache@v1
-      with:
-        path: target
-        key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
-    - name: Clippy
-      run: |
-        rustup component add clippy
-        cargo clippy --all-targets --all-features -- -D warnings
-    - name: Rustfmt
-      run: |
-        cargo fmt -- --check
-    - name: Build
-      run: cargo build --verbose
-    - name: Run tests
-      run: cargo test --verbose
-    - name: Release on Crates.io
-      if: github.ref == 'refs/heads/master'
-      run: |
-        cargo login ${{ secrets.CARGO_TOKEN }}
-        cargo publish
+      - uses: actions/checkout@v2
+      - name: Clippy
+        run: |
+          rustup component add clippy
+          cargo clippy --all-targets --all-features -- -D warnings
+      - name: Rustfmt
+        run: cargo fmt -- --check
+
+  test:
+    needs:
+      - linting
+    strategy:
+      matrix:
+        environment:
+          - os: "ubuntu-18.04"
+            target: "x86_64-unknown-linux-gnu"
+            cross: true
+          - os: "macos-10.15"
+            target: "x86_64-apple-darwin"
+            cross: true
+          - os: "ubuntu-18.04"
+            target: "x86_64-pc-windows-gnu"
+            cross: true
+            packages: "gcc-mingw-w64"
+    runs-on: "${{ matrix.environment.os }}"
+    name: "${{ matrix.environment.os }} (${{ matrix.environment.target }})"
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v1
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-${{ matrix.environment.target }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+      - uses: actions/cache@v1
+        with:
+          path: target
+          key: ${{ runner.os }}-${{ matrix.environment.target }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+      - name: Run tests
+        run: cargo test --verbose
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: ${{ matrix.environment.target }}
+          override: true
+      - name: Install system packages
+        if: ${{ matrix.environment.packages }}
+        run: sudo apt-get install -y ${{ matrix.environment.packages }}
+      - uses: actions-rs/cargo@v1
+        with:
+          use-cross: ${{ matrix.environment.cross }}
+          command: build
+          args: --release --target ${{ matrix.environment.target }} --verbose

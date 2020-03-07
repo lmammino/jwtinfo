@@ -1,0 +1,128 @@
+name: Release
+
+on:
+  create:
+    tags:
+      - v*
+
+jobs:
+
+  build:
+    strategy:
+      matrix:
+        environment:
+          - os: "ubuntu-18.04"
+            target: "x86_64-unknown-linux-gnu"
+            cross: true
+            exec: jwtinfo
+          - os: "macos-10.15"
+            target: "x86_64-apple-darwin"
+            cross: true
+            exec: jwtinfo
+          - os: "ubuntu-18.04"
+            target: "x86_64-pc-windows-gnu"
+            cross: true
+            exec: jwtinfo.exe
+            packages: "gcc-mingw-w64"
+    runs-on: "${{ matrix.environment.os }}"
+    name: "${{ matrix.environment.os }} (${{ matrix.environment.target }})"
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v1
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-${{ matrix.environment.target }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+      - uses: actions/cache@v1
+        with:
+          path: target
+          key: ${{ runner.os }}-${{ matrix.environment.target }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+      - name: Run tests
+        run: cargo test --verbose
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: ${{ matrix.environment.target }}
+          override: true
+      - name: Install system packages
+        if: ${{ matrix.environment.packages }}
+        run: sudo apt-get install -y ${{ matrix.environment.packages }}
+      - uses: actions-rs/cargo@v1
+        with:
+          use-cross: ${{ matrix.environment.cross }}
+          command: build
+          args: --release --target ${{ matrix.environment.target }} --verbose
+      - run: ls -al target/${{ matrix.environment.target }}/release/
+      - uses: actions/upload-artifact@v1
+        with:
+          name: ${{ matrix.environment.target }}
+          path: target/${{ matrix.environment.target }}/release/${{ matrix.environment.exec }}
+
+  release:
+    needs:
+      - linting
+      - test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v1
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+      - uses: actions/cache@v1
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+      - uses: actions/download-artifact@v1
+        with:
+          name: x86_64-unknown-linux-gnu
+      - uses: actions/download-artifact@v1
+        with:
+          name: x86_64-apple-darwin
+      - uses: actions/download-artifact@v1
+        with:
+          name: x86_64-pc-windows-gnu
+      - name: Get commit message
+        id: commit
+        run: echo "::set-output name=message::$(git log --no-merges -1 --oneline)"
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: ${{ github.ref }}
+          body: ${{ steps.commit.outputs.message }}
+          draft: false
+          prerelease: false
+      - name: Upload Release Asset 
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./x86_64-unknown-linux-gnu/jwtinfo
+          asset_name: x86_64-unknown-linux-gnu
+          asset_content_type: application/zip
+      - name: Upload Release Asset 
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./x86_64-apple-darwin/jwtinfo
+          asset_name: x86_64-apple-darwin
+          asset_content_type: application/zip
+      - name: Upload Release Asset 
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./x86_64-pc-windows-gnu/jwtinfo.exe
+          asset_name: x86_64-pc-windows-gnu.exe
+          asset_content_type: application/zip
+      - name: Release on Crates.io # TODO, remove dry run after testing this
+        run: |
+          cargo login ${{ secrets.CARGO_TOKEN }}
+          cargo publish --dry-run 
