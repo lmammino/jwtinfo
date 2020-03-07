@@ -33,6 +33,10 @@ jwtinfo eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI
 
 ## Install
 
+You can install the binary in several ways:
+
+### Cargo
+
 You can install the binary in your system with [`cargo`](https://doc.rust-lang.org/cargo/getting-started/installation.html):
 
 ```bash
@@ -41,7 +45,9 @@ cargo install jwtinfo
 
 At this point `jwtinfo` will be available as a binary in your system.
 
-**Note**: pre-compiled binaries are not available at this stage.
+### Precompiled binaries
+
+Pre-compiled binaries for x64 Windows, MacOs and Unix are available in the [Releases](https://github.com/lmammino/jwtinfo/releases) page.
 
 ## Contributing
 

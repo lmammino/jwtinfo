@@ -3,6 +3,10 @@ on:
   schedule:
     - cron: '0 7 * * *'
   push:
+    branches:
+      - '**'
+    tags-ignore:
+      - "*"
     paths: 
       - '**/Cargo.toml'
       - '**/Cargo.lock'
