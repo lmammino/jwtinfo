@@ -26,6 +26,12 @@ jobs:
             exec: jwtinfo.exe
             artifact-name: "jwtinfo-win64.exe"
             packages: "gcc-mingw-w64"
+          - os: "ubuntu-18.04"
+            target: "armv7-unknown-linux-gnueabihf"
+            cross: true
+            exec: jwtinfo
+            artifact-name: "jwtinfo-armv7"
+            packages: "gcc-arm-linux-gnueabihf"
     runs-on: "${{ matrix.environment.os }}"
     name: "${{ matrix.environment.os }} (${{ matrix.environment.target }})"
     steps:

@@ -47,7 +47,7 @@ At this point `jwtinfo` will be available as a binary in your system.
 
 ### Precompiled binaries
 
-Pre-compiled binaries for x64 Windows, MacOs and Unix are available in the [Releases](https://github.com/lmammino/jwtinfo/releases) page.
+Pre-compiled binaries for x64 (Windows, MacOs and Unix) and ARMv7 are available in the [Releases](https://github.com/lmammino/jwtinfo/releases) page.
 
 ## Contributing
 
