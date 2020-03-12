@@ -8,7 +8,7 @@ mod jwt;
 
 fn main() {
     let matches = App::new("jwtinfo")
-        .version("0.1.0")
+        .version(env!("CARGO_PKG_VERSION"))
         .about("Shows information about a JWT token")
         .arg(
             Arg::with_name("token")
@@ -22,7 +22,7 @@ fn main() {
     let jwt_token = match jwt::parse_token(token) {
         Ok(t) => t,
         Err(e) => {
-            eprintln!("{}", e);
+            eprintln!("Error: {}", e);
             process::exit(1);
         }
     };
