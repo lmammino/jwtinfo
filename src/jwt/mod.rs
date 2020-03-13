@@ -42,10 +42,12 @@ pub enum JWTDecodeError {
 impl fmt::Display for JWTDecodeError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            JWTDecodeError::MissingSection() => write!(f, "{}", "Missing token section".to_string()),
-            JWTDecodeError::InvalidUtf8(e) => e.fmt(f),
-            JWTDecodeError::InvalidBase64(e) => e.fmt(f),
-            JWTDecodeError::InvalidJSON(e) => e.fmt(f),
+            JWTDecodeError::MissingSection() => {
+                write!(f, "{}", "Missing token section".to_string())
+            }
+            JWTDecodeError::InvalidUtf8(e) => write!(f, "UTF8 error, {}", e),
+            JWTDecodeError::InvalidBase64(e) => write!(f, "Base64 error, {}", e),
+            JWTDecodeError::InvalidJSON(e) => write!(f, "JSON error, {}", e),
         }
     }
 }
