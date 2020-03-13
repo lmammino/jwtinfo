@@ -60,8 +60,10 @@ jobs:
           target: ${{ matrix.environment.target }}
           override: true
       - name: Install system packages
-        if: ${{ matrix.environment.packages }}
-        run: sudo apt-get install -qq ${{ matrix.environment.packages }}
+        if: matrix.environment.packages
+        run: |
+            sudo apt-get update;
+            sudo apt-get install -qq ${{ matrix.environment.packages }};
       - uses: actions-rs/cargo@v1
         with:
           use-cross: ${{ matrix.environment.cross }}
