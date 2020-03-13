@@ -1,7 +1,7 @@
 # jwtinfo
 
 [![build badge](https://github.com/lmammino/jwtinfo/workflows/Rust/badge.svg)](https://github.com/lmammino/jwtinfo/actions?query=workflow%3ARust)
-[![crates.io badge](http://meritbadge.herokuapp.com/jwtinfo)](https://crates.io/crates/jwtinfo)
+[![crates.io badge](https://img.shields.io/crates/v/jwtinfo.svg)](https://crates.io/crates/jwtinfo)
 [![rustc badge](https://img.shields.io/badge/rustc-1.40+-lightgray.svg)](https://blog.rust-lang.org/2019/12/19/Rust-1.40.0.html)
 [![Clippy Linting Result](https://img.shields.io/badge/clippy-<3-yellowgreen)](https://github.com/rust-lang/rust-clippy)
 [![License: MIT OR Apache-2.0](https://img.shields.io/crates/l/jwtinfo.svg)](#license)
@@ -48,6 +48,12 @@ At this point `jwtinfo` will be available as a binary in your system.
 ### Precompiled binaries
 
 Pre-compiled binaries for x64 (Windows, MacOs and Unix) and ARMv7 are available in the [Releases](https://github.com/lmammino/jwtinfo/releases) page.
+
+
+## Alternatives
+
+If you don't want to install a binary for debugging JWT tokens, a super simple `bash` alternative called [`jwtinfo.sh`](https://gist.github.com/lmammino/920ee0699af627a3492f86c607c859f6) is available.
+
 
 ## Contributing
 
