@@ -42,7 +42,7 @@ pub enum JWTDecodeError {
 impl fmt::Display for JWTDecodeError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            JWTDecodeError::MissingSection() => write!(f, "{}", format!("Missing token section")),
+            JWTDecodeError::MissingSection() => write!(f, "{}", "Missing token section".to_string()),
             JWTDecodeError::InvalidUtf8(e) => e.fmt(f),
             JWTDecodeError::InvalidBase64(e) => e.fmt(f),
             JWTDecodeError::InvalidJSON(e) => e.fmt(f),
@@ -85,7 +85,7 @@ impl fmt::Display for JWTDecodePartError {
                 write!(f, "{}", format!("Invalid Signature: {}", e))
             }
             JWTDecodePartError::UnexpectedPart() => {
-                write!(f, "{}", format!("Unexpected fragment after signature"))
+                write!(f, "{}", "Unexpected fragment after signature".to_string())
             }
         }
     }
@@ -123,9 +123,9 @@ fn parse_signature(raw_signature: Option<&str>) -> Result<Vec<u8>, JWTDecodeErro
 
 pub fn parse_token(token: &str) -> Result<Token, JWTDecodePartError> {
     let mut parts = token.split('.');
-    let header = parse_header(parts.next()).map_err(|e| JWTDecodePartError::Header(e))?;
-    let body = parse_body(parts.next()).map_err(|e| JWTDecodePartError::Body(e))?;
-    let signature = parse_signature(parts.next()).map_err(|e| JWTDecodePartError::Signature(e))?;
+    let header = parse_header(parts.next()).map_err(JWTDecodePartError::Header)?;
+    let body = parse_body(parts.next()).map_err(JWTDecodePartError::Body)?;
+    let signature = parse_signature(parts.next()).map_err(JWTDecodePartError::Signature)?;
 
     if parts.next().is_some() {
         return Err(JWTDecodePartError::UnexpectedPart());
