@@ -49,6 +49,12 @@ At this point `jwtinfo` will be available as a binary in your system.
 
 Pre-compiled binaries for x64 (Windows, MacOs and Unix) and ARMv7 are available in the [Releases](https://github.com/lmammino/jwtinfo/releases) page.
 
+
+## Alternatives
+
+If you don't want to install a binary for debugging JWT tokens, a super simple `bash` alternative called [`jwtinfo.sh`](https://gist.github.com/lmammino/920ee0699af627a3492f86c607c859f6) is available.
+
+
 ## Contributing
 
 Everyone is very welcome to contribute to this project.
