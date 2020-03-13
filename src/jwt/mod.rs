@@ -86,9 +86,11 @@ impl fmt::Display for JWTDecodePartError {
             JWTDecodePartError::Signature(e) => {
                 write!(f, "{}", format!("Invalid Signature: {}", e))
             }
-            JWTDecodePartError::UnexpectedPart() => {
-                write!(f, "{}", "Unexpected fragment after signature".to_string())
-            }
+            JWTDecodePartError::UnexpectedPart() => write!(
+                f,
+                "{}",
+                "Error: Unexpected fragment after signature".to_string()
+            ),
         }
     }
 }
