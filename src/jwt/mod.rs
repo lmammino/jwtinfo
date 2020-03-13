@@ -99,7 +99,7 @@ fn parse_base64_string(s: &str) -> Result<String, JWTDecodeError> {
 
 fn parse_header(raw_header: Option<&str>) -> Result<Header, JWTDecodeError> {
     match raw_header {
-        None => return Err(JWTDecodeError::MissingSection()),
+        None => Err(JWTDecodeError::MissingSection()),
         Some(s) => {
             let header_str = parse_base64_string(s)?;
             Ok(serde_json::from_str::<Header>(&header_str)?)
@@ -109,14 +109,14 @@ fn parse_header(raw_header: Option<&str>) -> Result<Header, JWTDecodeError> {
 
 fn parse_body(raw_body: Option<&str>) -> Result<String, JWTDecodeError> {
     match raw_body {
-        None => return Err(JWTDecodeError::MissingSection()),
+        None => Err(JWTDecodeError::MissingSection()),
         Some(s) => Ok(parse_base64_string(s)?),
     }
 }
 
 fn parse_signature(raw_signature: Option<&str>) -> Result<Vec<u8>, JWTDecodeError> {
     match raw_signature {
-        None => return Err(JWTDecodeError::MissingSection()),
+        None => Err(JWTDecodeError::MissingSection()),
         Some(s) => Ok(base64::decode_config(s, *BASE64_CONFIG)?),
     }
 }

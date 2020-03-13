@@ -22,7 +22,7 @@ fn main() {
     let jwt_token = match jwt::parse_token(token) {
         Ok(t) => t,
         Err(e) => {
-            eprintln!("Error: {}", e);
+            eprintln!("{}", e);
             process::exit(1);
         }
     };
