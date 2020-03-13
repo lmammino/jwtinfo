@@ -33,7 +33,7 @@ impl Token {
 
 #[derive(Debug)]
 pub enum JWTDecodeError {
-    MissingSection(String),
+    MissingSection(),
     InvalidUtf8(str::Utf8Error),
     InvalidBase64(base64::DecodeError),
     InvalidJSON(serde_json::error::Error),
@@ -42,9 +42,7 @@ pub enum JWTDecodeError {
 impl fmt::Display for JWTDecodeError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            JWTDecodeError::MissingSection(s) => {
-                write!(f, "{}", format!("Missing token section: {}", s))
-            }
+            JWTDecodeError::MissingSection() => write!(f, "{}", format!("Missing token section")),
             JWTDecodeError::InvalidUtf8(e) => e.fmt(f),
             JWTDecodeError::InvalidBase64(e) => e.fmt(f),
             JWTDecodeError::InvalidJSON(e) => e.fmt(f),
@@ -70,35 +68,68 @@ impl From<serde_json::error::Error> for JWTDecodeError {
     }
 }
 
+#[derive(Debug)]
+pub enum JWTDecodePartError {
+    Header(JWTDecodeError),
+    Body(JWTDecodeError),
+    Signature(JWTDecodeError),
+    UnexpectedPart(),
+}
+
+impl fmt::Display for JWTDecodePartError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            JWTDecodePartError::Header(e) => write!(f, "{}", format!("Invalid Header: {}", e)),
+            JWTDecodePartError::Body(e) => write!(f, "{}", format!("Invalid Body: {}", e)),
+            JWTDecodePartError::Signature(e) => {
+                write!(f, "{}", format!("Invalid Signature: {}", e))
+            }
+            JWTDecodePartError::UnexpectedPart() => {
+                write!(f, "{}", format!("Unexpected fragment after signature"))
+            }
+        }
+    }
+}
+
 fn parse_base64_string(s: &str) -> Result<String, JWTDecodeError> {
     let s = base64::decode_config(s, *BASE64_CONFIG)?;
     let s = str::from_utf8(&s)?;
     Ok(s.to_string())
 }
 
-pub fn parse_token(token: &str) -> Result<Token, JWTDecodeError> {
-    let mut parts = token.split('.');
-
-    // header
-    let header = match parts.next() {
-        None => return Err(JWTDecodeError::MissingSection("header".to_string())),
+fn parse_header(raw_header: Option<&str>) -> Result<Header, JWTDecodeError> {
+    match raw_header {
+        None => return Err(JWTDecodeError::MissingSection()),
         Some(s) => {
             let header_str = parse_base64_string(s)?;
-            serde_json::from_str(&header_str)?
+            Ok(serde_json::from_str::<Header>(&header_str)?)
         }
-    };
+    }
+}
 
-    // body
-    let body = match parts.next() {
-        None => return Err(JWTDecodeError::MissingSection("body".to_string())),
-        Some(s) => parse_base64_string(s)?,
-    };
+fn parse_body(raw_body: Option<&str>) -> Result<String, JWTDecodeError> {
+    match raw_body {
+        None => return Err(JWTDecodeError::MissingSection()),
+        Some(s) => Ok(parse_base64_string(s)?),
+    }
+}
 
-    // signature
-    let signature = match parts.next() {
-        None => return Err(JWTDecodeError::MissingSection("signature".to_string())),
-        Some(s) => base64::decode_config(s, *BASE64_CONFIG)?,
-    };
+fn parse_signature(raw_signature: Option<&str>) -> Result<Vec<u8>, JWTDecodeError> {
+    match raw_signature {
+        None => return Err(JWTDecodeError::MissingSection()),
+        Some(s) => Ok(base64::decode_config(s, *BASE64_CONFIG)?),
+    }
+}
+
+pub fn parse_token(token: &str) -> Result<Token, JWTDecodePartError> {
+    let mut parts = token.split('.');
+    let header = parse_header(parts.next()).map_err(|e| JWTDecodePartError::Header(e))?;
+    let body = parse_body(parts.next()).map_err(|e| JWTDecodePartError::Body(e))?;
+    let signature = parse_signature(parts.next()).map_err(|e| JWTDecodePartError::Signature(e))?;
+
+    if parts.next().is_some() {
+        return Err(JWTDecodePartError::UnexpectedPart());
+    }
 
     Ok(Token::new(header, body, signature))
 }
