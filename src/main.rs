@@ -21,6 +21,8 @@ fn main() -> io::Result<()> {
 
     let mut token = matches.value_of("token").unwrap();
     let mut buffer = String::new();
+
+    // if the token is "-" read it from stdin
     if token == "-" {
         io::stdin().read_to_string(&mut buffer)?;
         token = &*buffer.trim();

@@ -1,5 +1,6 @@
 use base64;
 use serde::Deserialize;
+use std::error::Error;
 use std::fmt;
 use std::str;
 
@@ -94,6 +95,8 @@ impl fmt::Display for JWTDecodePartError {
         }
     }
 }
+
+impl Error for JWTDecodePartError {}
 
 fn parse_base64_string(s: &str) -> Result<String, JWTDecodeError> {
     let s = base64::decode_config(s, *BASE64_CONFIG)?;
