@@ -57,7 +57,7 @@ If you don't want to install a binary for debugging JWT tokens, a super simple `
 
 ## Credits
 
-A special thanks goes to the [Rust Reddit community](https://www.reddit.com/r/rust/) for providing a lot of useful suggestions on how to improve this project. A special thanks goes to: [mardiros](https://www.reddit.com/user/mardiros/), [matthieum](https://www.reddit.com/user/matthieum/), [steveklabnik1](https://www.reddit.com/user/steveklabnik1/), [ESBDB](https://www.reddit.com/user/ESBDB/), [Dushistov](https://www.reddit.com/user/Dushistov/), [Doddzilla7](https://www.reddit.com/user/Doddzilla7/).
+A special thank you goes to the [Rust Reddit community](https://www.reddit.com/r/rust/) for providing a lot of useful suggestions on how to improve this project. A special thanks goes to: [mardiros](https://www.reddit.com/user/mardiros/), [matthieum](https://www.reddit.com/user/matthieum/), [steveklabnik1](https://www.reddit.com/user/steveklabnik1/), [ESBDB](https://www.reddit.com/user/ESBDB/), [Dushistov](https://www.reddit.com/user/Dushistov/), [Doddzilla7](https://www.reddit.com/user/Doddzilla7/). Another huge thank you goes to the [Rust stackoverflow community](https://chat.stackoverflow.com/rooms/62927/rust), especially to [Denys Séguret](https://chat.stackoverflow.com/users/263525).
 
 
 ## Contributing
