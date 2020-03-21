@@ -13,13 +13,10 @@ fn assert_parse_token_fails_due_to_invalid_header() {
         "invalid_header.eyJmb28iOiJiYXIifQ.dtxWM6MIcgoeMgH87tGvsNDY6cHWL6MGW4LeYvnm1JA",
     );
     let jwt_token = parse_token(&token);
-    assert!(
-        true,
-        jwt_token
-            .unwrap_err()
-            .to_string()
-            .contains("Invalid Header:")
-    );
+    assert!(jwt_token
+        .unwrap_err()
+        .to_string()
+        .contains("Invalid Header:"));
 }
 
 #[test]
@@ -28,10 +25,7 @@ fn assert_parse_token_fails_due_to_invalid_body() {
         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.invalid_body.dtxWM6MIcgoeMgH87tGvsNDY6cHWL6MGW4LeYvnm1JA",
     );
     let jwt_token = parse_token(&token);
-    assert!(
-        true,
-        jwt_token.unwrap_err().to_string().contains("Invalid Body:")
-    );
+    assert!(jwt_token.unwrap_err().to_string().contains("Invalid Body:"));
 }
 
 #[test]
@@ -39,13 +33,10 @@ fn assert_parse_token_fails_due_to_invalid_signature() {
     let token =
         String::from("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmb28iOiJiYXIifQ.invalid_signature");
     let jwt_token = parse_token(&token);
-    assert!(
-        true,
-        jwt_token
-            .unwrap_err()
-            .to_string()
-            .contains("Invalid Signature:")
-    );
+    assert!(jwt_token
+        .unwrap_err()
+        .to_string()
+        .contains("Invalid Signature:"));
 }
 
 #[test]
