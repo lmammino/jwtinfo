@@ -16,7 +16,7 @@ fn assert_parse_token_fails_due_to_invalid_header() {
     assert!(jwt_token
         .unwrap_err()
         .to_string()
-        .contains("Invalid Header:"));
+        .starts_with("Invalid Header:"));
 }
 
 #[test]
@@ -25,7 +25,10 @@ fn assert_parse_token_fails_due_to_invalid_body() {
         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.invalid_body.dtxWM6MIcgoeMgH87tGvsNDY6cHWL6MGW4LeYvnm1JA",
     );
     let jwt_token = parse_token(&token);
-    assert!(jwt_token.unwrap_err().to_string().contains("Invalid Body:"));
+    assert!(jwt_token
+        .unwrap_err()
+        .to_string()
+        .starts_with("Invalid Body:"));
 }
 
 #[test]
@@ -36,7 +39,7 @@ fn assert_parse_token_fails_due_to_invalid_signature() {
     assert!(jwt_token
         .unwrap_err()
         .to_string()
-        .contains("Invalid Signature:"));
+        .starts_with("Invalid Signature:"));
 }
 
 #[test]
