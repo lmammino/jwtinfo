@@ -91,7 +91,8 @@ jobs:
         env:
           CARGO_INCREMENTAL: '0'
           RUSTFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Zno-landing-pads'
-      - uses: actions-rs/grcov@v0.1
+      - id: coverage
+        uses: actions-rs/grcov@v0.1
       - name: Show created coverage file
         run: |
           echo "${{ steps.coverage.outputs.report }}"
