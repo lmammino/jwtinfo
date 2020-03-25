@@ -52,3 +52,33 @@ fn assert_parse_token_fails_due_to_more_then_three_fragment() {
         jwt_token.unwrap_err().to_string()
     );
 }
+
+#[test]
+fn assert_parse_token_fails_due_to_missing_body() {
+    let token = String::from("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9");
+    let jwt_token = parse_token(&token);
+    assert_eq!(
+        String::from("Invalid Body: Missing token section"),
+        jwt_token.unwrap_err().to_string()
+    );
+}
+
+#[test]
+fn assert_parse_token_fails_due_to_missing_signature() {
+    let token = String::from("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmb28iOiJiYXIifQ");
+    let jwt_token = parse_token(&token);
+    assert_eq!(
+        String::from("Invalid Signature: Missing token section"),
+        jwt_token.unwrap_err().to_string()
+    );
+}
+
+#[test]
+fn assert_parse_token_fails_due_invalid_json_header() {
+    let token = String::from("eyJhbGc6ICJIUzI1NiIsInR5cCI6ICJKV1QifQ.eyJmb28iOiJiYXIifQ.UIZchxQD36xuhacrJF9HQ5SIUxH5HBiv9noESAacsxU");
+    let jwt_token = parse_token(&token);
+    assert!(jwt_token
+        .unwrap_err()
+        .to_string()
+        .starts_with("Invalid Header: JSON error"));
+}

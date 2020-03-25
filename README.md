@@ -1,6 +1,7 @@
 # jwtinfo
 
 [![build badge](https://github.com/lmammino/jwtinfo/workflows/Rust/badge.svg)](https://github.com/lmammino/jwtinfo/actions?query=workflow%3ARust)
+[![codecov](https://codecov.io/gh/lmammino/jwtinfo/branch/master/graph/badge.svg)](https://codecov.io/gh/lmammino/jwtinfo)
 [![crates.io badge](https://img.shields.io/crates/v/jwtinfo.svg)](https://crates.io/crates/jwtinfo)
 [![rustc badge](https://img.shields.io/badge/rustc-1.40+-lightgray.svg)](https://blog.rust-lang.org/2019/12/19/Rust-1.40.0.html)
 [![Clippy Linting Result](https://img.shields.io/badge/clippy-<3-yellowgreen)](https://github.com/rust-lang/rust-clippy)
@@ -51,9 +52,55 @@ At this point `jwtinfo` will be available as a binary in your system.
 Pre-compiled binaries for x64 (Windows, MacOs and Unix) and ARMv7 are available in the [Releases](https://github.com/lmammino/jwtinfo/releases) page.
 
 
-## Alternatives
+#### Alternatives
 
 If you don't want to install a binary for debugging JWT tokens, a super simple `bash` alternative called [`jwtinfo.sh`](https://gist.github.com/lmammino/920ee0699af627a3492f86c607c859f6) is available.
+
+
+## Coverage reports
+
+If you want to run coverage reports locally you can follow this recipe.
+
+First of all you will need Rust Nightly that you can get with `rustup`
+
+```bash
+rustup install nightly
+```
+
+You will also need `grcov` that you can get with `cargo`:
+
+```bash
+cargo install grcov
+```
+
+Now you can run the tests in profile mode:
+
+```bash
+export CARGO_INCREMENTAL=0
+export RUSTFLAGS="-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Zno-landing-pads"
+cargo +nightly test
+```
+
+This will run your tests and generate coverage info in `./target/debug/`
+
+Now we can run `grcov`:
+
+```bash
+grcov ./target/debug/ -s . -t html --llvm --branch --ignore-not-existing -o ./target/debug/coverage/
+```
+
+Finally you will have your browsable coverage report at `./target/debug/coverage/index.html`.
+
+
+### Tarpaulin coverage
+
+Since `grcov` tends to be somewhat inaccurate at times, you can also get a coverage report by running [tarpaulin](https://github.com/xd009642/tarpaulin) using docker:
+
+```bash
+docker run --security-opt seccomp=unconfined -v "${PWD}:/volume" xd009642/tarpaulin:develop-nightly bash -c 'cargo build && cargo tarpaulin -o Html'
+```
+
+Your coverage report will be available as `tarpaulin-report.html` in the root of the project.
 
 
 ## Credits
