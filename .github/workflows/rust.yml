@@ -77,6 +77,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - name: Install perftools
+        run: |
+          apt-get update
+          apt-get install -y libgoogle-perftools-dev
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: nightly

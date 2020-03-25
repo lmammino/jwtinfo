@@ -92,6 +92,17 @@ grcov ./target/debug/ -s . -t html --llvm --branch --ignore-not-existing -o ./ta
 Finally you will have your browsable coverage report at `./target/debug/coverage/index.html`.
 
 
+### Tarpaulin coverage
+
+Since `grcov` tends to be somewhat inaccurate at times, you can also get a coverage report by running [tarpaulin](https://github.com/xd009642/tarpaulin) using docker:
+
+```bash
+docker run --security-opt seccomp=unconfined -v "${PWD}:/volume" xd009642/tarpaulin:develop-nightly bash -c 'cargo build && cargo tarpaulin -o Html'
+```
+
+Your coverage report will be available as `tarpaulin-report.html` in the root of the project.
+
+
 ## Credits
 
 A special thank you goes to the [Rust Reddit community](https://www.reddit.com/r/rust/) for providing a lot of useful suggestions on how to improve this project. A special thanks goes to: [mardiros](https://www.reddit.com/user/mardiros/), [matthieum](https://www.reddit.com/user/matthieum/), [steveklabnik1](https://www.reddit.com/user/steveklabnik1/), [ESBDB](https://www.reddit.com/user/ESBDB/), [Dushistov](https://www.reddit.com/user/Dushistov/), [Doddzilla7](https://www.reddit.com/user/Doddzilla7/). Another huge thank you goes to the [Rust stackoverflow community](https://chat.stackoverflow.com/rooms/62927/rust), especially to [Denys Séguret](https://chat.stackoverflow.com/users/263525).
