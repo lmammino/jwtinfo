@@ -47,6 +47,20 @@ cargo install jwtinfo
 
 At this point `jwtinfo` will be available as a binary in your system.
 
+
+### Install script
+
+The following script will download and install precompiled binaries from the latest GitHub release
+
+```bash
+curl https://raw.githubusercontent.com/lmammino/jwtinfo/master/install.sh | sh
+```
+
+By default it will install the binary in `/usr/local/bin`. You can customize this by setting the `INSTALL_DIRECTORY` environment variable before running the script (e.g. `INSTALL_DIRECTORY=$HOME` will install the binary in `$HOME/bin`).
+
+If you want to install a specific release you can set the `RELEASE_TAG` environment variable to point to your target versiong before running the script (e.g. `RELESE_TAG=v0.1.7`).
+
+
 ### Precompiled binaries
 
 Pre-compiled binaries for x64 (Windows, MacOs and Unix) and ARMv7 are available in the [Releases](https://github.com/lmammino/jwtinfo/releases) page.
