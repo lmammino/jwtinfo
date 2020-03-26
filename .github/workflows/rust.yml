@@ -7,8 +7,6 @@ on:
     tags-ignore:
       - "*"
 
-name: Rust
-
 jobs:
   check:
     name: Rust project
