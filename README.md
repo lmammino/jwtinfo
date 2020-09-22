@@ -9,6 +9,11 @@
 [![Gitpod Ready-to-Code](https://img.shields.io/badge/Gitpod-Ready--to--Code-blue?logo=gitpod)](https://gitpod.io/#https://github.com/lmammino/jwtinfo) 
 
 
+<!--
+- Consider compliance with RFC https://tools.ietf.org/html/rfc7519#section-7.2
+- Document which platforms (OS, CPU architecture) are supported.
+-->
+
 A command line tool to get information about JWT tokens
 
 ## Usage

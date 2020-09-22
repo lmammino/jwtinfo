@@ -1,7 +1,15 @@
 [package]
 name = "jwtinfo"
 description = "Command line tool to get information about JWT tokens"
-categories = ["command-line-interface", "command-line-utilities", "cryptography", "development-tools", "development-tools::debugging"]
+categories = [
+    "command-line-interface", # unnecessary?
+    "command-line-utilities",
+    "cryptography",
+    "development-tools",
+    "development-tools::debugging"
+    # add "jwt",
+    # add "web",
+]
 repository = "https://github.com/lmammino/jwtinfo"
 documentation = "https://github.com/lmammino/jwtinfo"
 readme = "README.md"

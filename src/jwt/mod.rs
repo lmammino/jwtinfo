@@ -9,9 +9,29 @@ lazy_static! {
         base64::Config::new(base64::CharacterSet::UrlSafe, false);
 }
 
+// enum Typ {
+//     JWT,
+//     // Custom(String),
+// }
+//
+// #[derive(Debug, PartialOrd, PartialEq)]
+// struct InvalidInput;
+//
+// impl str::FromStr for Typ {
+//     type Err = InvalidInput;
+//
+//     fn from_str(s: &str) -> Result<Self, Self::Err> {
+//         match s {
+//             "JWT" => Ok(Typ::JWT),
+//             "jwt" => Ok(Typ::JWT),
+//             _ => Err(InvalidInput),
+//         }
+//     }
+// }
+
 #[derive(Deserialize, Debug)]
 pub struct Header {
-    typ: String,
+    typ: String, // Consider add a concrete enum
     pub alg: String,
 }
 
@@ -34,7 +54,8 @@ impl Token {
 
 #[derive(Debug)]
 pub enum JWTDecodeError {
-    MissingSection(),
+    MissingSection(), // Maybe add index to the beginning and end of the span, e.g. MissingSection(usize),
+    //                   which would enable more helpful error messages
     InvalidUtf8(str::Utf8Error),
     InvalidBase64(base64::DecodeError),
     InvalidJSON(serde_json::error::Error),
@@ -42,14 +63,16 @@ pub enum JWTDecodeError {
 
 impl fmt::Display for JWTDecodeError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            JWTDecodeError::MissingSection() => {
-                write!(f, "{}", "Missing token section".to_string())
-            }
-            JWTDecodeError::InvalidUtf8(e) => write!(f, "UTF8 error, {}", e),
-            JWTDecodeError::InvalidBase64(e) => write!(f, "Base64 error, {}", e),
-            JWTDecodeError::InvalidJSON(e) => write!(f, "JSON error, {}", e),
-        }
+        use JWTDecodeError::*;
+
+        let (message, argument) = match self {
+            MissingSection() => ("Missing token section", ""),
+            InvalidUtf8(e) => ("UTF8 error, ", e),
+            InvalidBase64(e) => ("Base64 error, ", e),
+            InvalidJSON(e) => ("JSON error, ", e),
+        };
+
+        write!(f, "{} {}", message, argument);
     }
 }
 
@@ -81,18 +104,28 @@ pub enum JWTDecodePartError {
 
 impl fmt::Display for JWTDecodePartError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            JWTDecodePartError::Header(e) => write!(f, "{}", format!("Invalid Header: {}", e)),
-            JWTDecodePartError::Body(e) => write!(f, "{}", format!("Invalid Body: {}", e)),
-            JWTDecodePartError::Signature(e) => {
-                write!(f, "{}", format!("Invalid Signature: {}", e))
-            }
-            JWTDecodePartError::UnexpectedPart() => write!(
-                f,
-                "{}",
-                "Error: Unexpected fragment after signature".to_string()
-            ),
-        }
+        // match self {
+        //     JWTDecodePartError::Header(e) => write!(f, "{}", format!("Invalid Header: {}", e)),
+        //     JWTDecodePartError::Body(e) => write!(f, "{}", format!("Invalid Body: {}", e)),
+        //     JWTDecodePartError::Signature(e) => {
+        //         write!(f, "{}", format!("Invalid Signature: {}", e))
+        //     }
+        //     JWTDecodePartError::UnexpectedPart() => write!(
+        //         f,
+        //         "{}",
+        //         "Error: Unexpected fragment after signature".to_string()
+        //     ),
+        // }
+        use JWTDecodePartError::*;
+
+        let message = match self {
+            Header(e) => format!("Invalid Header: {}", e),
+            Body(e) => format!("Invalid Body: {}", e),
+            Signature(e) => format!("Invalid Signature: {}", e),
+            UnexpectedPart() => "Error: Unexpected fragment after signature".to_string(),
+        };
+
+        write!(f, "{}", message)
     }
 }
 
@@ -128,18 +161,27 @@ fn parse_signature(raw_signature: Option<&str>) -> Result<Vec<u8>, JWTDecodeErro
     }
 }
 
-pub fn parse_token(token: &str) -> Result<Token, JWTDecodePartError> {
-    let mut parts = token.split('.');
+// Consider accepting any type that can act as a &str - <T: AsRef<str>>(token: T)
+
+// Consider retaining the index (line number, character number) of where the error was detected
+
+// Consider adding comments  (and usage examples for public functions)
+pub fn parse_token<T: AsRef<str>>(token: T) -> Result<Token, JWTDecodePartError> {
+    // abcd.efg.hi
+    let mut parts = token.as_ref().split('.');
     let header = parse_header(parts.next()).map_err(JWTDecodePartError::Header)?;
     let body = parse_body(parts.next()).map_err(JWTDecodePartError::Body)?;
     let signature = parse_signature(parts.next()).map_err(JWTDecodePartError::Signature)?;
 
+    // abcd.efg.hi.err
     if parts.next().is_some() {
-        return Err(JWTDecodePartError::UnexpectedPart());
+        return Err(JWTDecodePartError::UnexpectedPart()); // Add the unexpected string?
     }
 
     Ok(Token::new(header, body, signature))
 }
 
+
+// adding the #[cfg(test] annotation is very useful
 #[cfg(test)]
 mod test;

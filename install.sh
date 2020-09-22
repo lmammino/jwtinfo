@@ -184,7 +184,7 @@ GUNZIPPED_FILE=$(mktemp)
 downloadFile "$BINARY_URL" "$DOWNLOAD_FILE"
 
 echo "Decompressing $DOWNLOAD_FILE into $GUNZIPPED_FILE"
-gunzip -c $DOWNLOAD_FILE > $GUNZIPPED_FILE
+gunzip -c "$DOWNLOAD_FILE" > "$GUNZIPPED_FILE"
 
 echo "Setting executable permissions."
 chmod +x "$GUNZIPPED_FILE"
