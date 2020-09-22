@@ -1,4 +1,3 @@
-use base64;
 use serde::Deserialize;
 use std::error::Error;
 use std::fmt;
