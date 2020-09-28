@@ -8,12 +8,12 @@ use std::fmt;
 use std::str;
 
 lazy_static! {
-    #[doc(hidden)]
     static ref BASE64_CONFIG: base64::Config =
         base64::Config::new(base64::CharacterSet::UrlSafe, false);
 }
 
 /// Represents the header part of a JWT token
+#[doc(inline)]
 #[derive(Deserialize, Debug)]
 pub struct Header {
     /// the type of token, must be "JWT"
@@ -23,6 +23,7 @@ pub struct Header {
 }
 
 /// Represents a JWT token, composed by a header, a body and a signature
+#[doc(inline)]
 #[derive(Debug)]
 pub struct Token {
     /// the header part of the token
@@ -110,12 +111,14 @@ impl fmt::Display for JWTDecodePartError {
 
 impl Error for JWTDecodePartError {}
 
+#[doc(hidden)]
 fn parse_base64_string(s: &str) -> Result<String, JWTDecodeError> {
     let s = base64::decode_config(s, *BASE64_CONFIG)?;
     let s = str::from_utf8(&s)?;
     Ok(s.to_string())
 }
 
+#[doc(hidden)]
 fn parse_header(raw_header: Option<&str>) -> Result<Header, JWTDecodeError> {
     match raw_header {
         None => Err(JWTDecodeError::MissingSection()),
@@ -126,6 +129,7 @@ fn parse_header(raw_header: Option<&str>) -> Result<Header, JWTDecodeError> {
     }
 }
 
+#[doc(hidden)]
 fn parse_body(raw_body: Option<&str>) -> Result<String, JWTDecodeError> {
     match raw_body {
         None => Err(JWTDecodeError::MissingSection()),
@@ -133,6 +137,7 @@ fn parse_body(raw_body: Option<&str>) -> Result<String, JWTDecodeError> {
     }
 }
 
+#[doc(hidden)]
 fn parse_signature(raw_signature: Option<&str>) -> Result<Vec<u8>, JWTDecodeError> {
     match raw_signature {
         None => Err(JWTDecodeError::MissingSection()),
@@ -140,7 +145,8 @@ fn parse_signature(raw_signature: Option<&str>) -> Result<Vec<u8>, JWTDecodeErro
     }
 }
 
-pub fn parse_token(token: &str) -> Result<Token, JWTDecodePartError> {
+/// Parses a token from a string
+pub fn parse(token: &str) -> Result<Token, JWTDecodePartError> {
     let mut parts = token.split('.');
     let header = parse_header(parts.next()).map_err(JWTDecodePartError::Header)?;
     let body = parse_body(parts.next()).map_err(JWTDecodePartError::Body)?;
