@@ -1,28 +1,41 @@
+//! # JWT
+//!
+//! `jwt` is a collection of utilities to parse JWT tokens
+
 use serde::Deserialize;
 use std::error::Error;
 use std::fmt;
 use std::str;
 
 lazy_static! {
+    #[doc(hidden)]
     static ref BASE64_CONFIG: base64::Config =
         base64::Config::new(base64::CharacterSet::UrlSafe, false);
 }
 
+/// Represents the header part of a JWT token
 #[derive(Deserialize, Debug)]
 pub struct Header {
+    /// the type of token, must be "JWT"
     typ: String,
+    /// the signature algorithm used for this token
     pub alg: String,
 }
 
+/// Represents a JWT token, composed by a header, a body and a signature
 #[derive(Debug)]
 pub struct Token {
+    /// the header part of the token
     pub header: Header,
+    /// the body (or payload) of the token
     pub body: String,
+    /// the signature data of the token
     pub signature: Vec<u8>,
 }
 
 impl Token {
-    pub fn new(header: Header, body: String, signature: Vec<u8>) -> Self {
+    /// Creates a new token from scratch
+    fn new(header: Header, body: String, signature: Vec<u8>) -> Self {
         Self {
             header,
             body,
