@@ -3,6 +3,7 @@
 [![build badge](https://github.com/lmammino/jwtinfo/workflows/Rust/badge.svg)](https://github.com/lmammino/jwtinfo/actions?query=workflow%3ARust)
 [![codecov](https://codecov.io/gh/lmammino/jwtinfo/branch/master/graph/badge.svg)](https://codecov.io/gh/lmammino/jwtinfo)
 [![crates.io badge](https://img.shields.io/crates/v/jwtinfo.svg)](https://crates.io/crates/jwtinfo)
+[![Documentation](https://docs.rs/jwtinfo/badge.svg)](https://docs.rs/jwtinfo)
 [![rustc badge](https://img.shields.io/badge/rustc-1.40+-lightgray.svg)](https://blog.rust-lang.org/2019/12/19/Rust-1.40.0.html)
 [![Clippy Linting Result](https://img.shields.io/badge/clippy-<3-yellowgreen)](https://github.com/rust-lang/rust-clippy)
 [![License: MIT OR Apache-2.0](https://img.shields.io/crates/l/jwtinfo.svg)](#license)
@@ -69,6 +70,25 @@ Pre-compiled binaries for x64 (Windows, MacOs and Unix) and ARMv7 are available 
 #### Alternatives
 
 If you don't want to install a binary for debugging JWT tokens, a super simple `bash` alternative called [`jwtinfo.sh`](https://gist.github.com/lmammino/920ee0699af627a3492f86c607c859f6) is available.
+
+
+## Programmatic usage
+
+Install with cargo:
+
+```toml
+[dependencies]
+jwtinfo = "*"
+```
+
+Then use it in your code
+
+```rust
+use jwtinfo::{jwt};
+let token = jwt::parse("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c").unwrap();
+assert_eq!(token.header.alg, "HS256");
+assert_eq!(token.body, "{\"sub\":\"1234567890\",\"name\":\"John Doe\",\"iat\":1516239022}");
+```
 
 
 ## Coverage reports
