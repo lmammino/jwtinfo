@@ -13,7 +13,7 @@
 //! ## Usage
 //!
 //! ```bash
-//! jwtinfo eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+//! $ jwtinfo eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
 //! ```
 //!
 //! Which will print:
@@ -45,11 +45,10 @@ use clap::{App, Arg};
 use std::io::{self, Read};
 use std::process;
 
+pub mod jwt;
+
 #[macro_use]
 extern crate lazy_static;
-
-#[doc(inline)]
-pub mod jwt;
 
 #[allow(dead_code)]
 #[doc(hidden)]
