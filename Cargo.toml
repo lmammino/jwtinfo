@@ -11,11 +11,11 @@ edition = "2018"
 license = "MIT"
 
 [dependencies]
-clap = "2.33.0"
-base64 = "0.11.0"
+clap = "2.33"
+base64 = "0.11"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-lazy_static = "1.4.0"
+lazy_static = "1.4"
 
 [lib]
 name = "jwtinfo"
