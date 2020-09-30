@@ -43,15 +43,6 @@ jobs:
         name: "${{ matrix.environment.os }} (${{ matrix.environment.target }})"
         steps:
             - uses: actions/checkout@v2
-            # # Commented out to try to solve the error "error[E0463]: can't find crate for `serde_derive` which `serde` depends on" on GitHub actions
-            #   - uses: actions/cache@v1
-            #     with:
-            #       path: ~/.cargo/registry
-            #       key: ${{ runner.os }}-${{ matrix.environment.target }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-            #   - uses: actions/cache@v1
-            #     with:
-            #       path: target
-            #       key: ${{ runner.os }}-${{ matrix.environment.target }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
             - name: Run tests
               run: cargo test --verbose
             - uses: actions-rs/toolchain@v1
