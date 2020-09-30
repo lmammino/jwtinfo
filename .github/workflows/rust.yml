@@ -1,103 +1,103 @@
 name: Rust
 
 on:
-  push:
-    branches:
-      - '**'
-    tags-ignore:
-      - "*"
+    push:
+        branches:
+            - "**"
+        tags-ignore:
+            - "*"
 
 jobs:
+    linting:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v2
+            - name: Clippy
+              run: |
+                  rustup component add clippy
+                  cargo clippy --all-targets --all-features -- -D warnings
+            - name: Rustfmt
+              run: cargo fmt -- --check
 
-  linting:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Clippy
-        run: |
-          rustup component add clippy
-          cargo clippy --all-targets --all-features -- -D warnings
-      - name: Rustfmt
-        run: cargo fmt -- --check
+    test:
+        needs:
+            - linting
+        strategy:
+            matrix:
+                environment:
+                    - os: "ubuntu-18.04"
+                      target: "x86_64-unknown-linux-gnu"
+                      cross: true
+                    - os: "macos-10.15"
+                      target: "x86_64-apple-darwin"
+                      cross: true
+                    - os: "ubuntu-18.04"
+                      target: "x86_64-pc-windows-gnu"
+                      cross: true
+                      packages: "gcc-mingw-w64"
+                    - os: "ubuntu-18.04"
+                      target: "armv7-unknown-linux-gnueabihf"
+                      cross: true
+                      packages: "gcc-arm-linux-gnueabihf"
+        runs-on: "${{ matrix.environment.os }}"
+        name: "${{ matrix.environment.os }} (${{ matrix.environment.target }})"
+        steps:
+            - uses: actions/checkout@v2
+            # # Commented out to try to solve the error "error[E0463]: can't find crate for `serde_derive` which `serde` depends on" on GitHub actions
+            #   - uses: actions/cache@v1
+            #     with:
+            #       path: ~/.cargo/registry
+            #       key: ${{ runner.os }}-${{ matrix.environment.target }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+            #   - uses: actions/cache@v1
+            #     with:
+            #       path: target
+            #       key: ${{ runner.os }}-${{ matrix.environment.target }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+            - name: Run tests
+              run: cargo test --verbose
+            - uses: actions-rs/toolchain@v1
+              with:
+                  toolchain: stable
+                  target: ${{ matrix.environment.target }}
+                  override: true
+            - name: Install system packages
+              if: matrix.environment.packages
+              run: |
+                  sudo apt-get update;
+                  sudo apt-get install -qq ${{ matrix.environment.packages }};
+            - uses: actions-rs/cargo@v1
+              with:
+                  use-cross: ${{ matrix.environment.cross }}
+                  command: build
+                  args: --release --target ${{ matrix.environment.target }} --verbose
 
-  test:
-    needs:
-      - linting
-    strategy:
-      matrix:
-        environment:
-          - os: "ubuntu-18.04"
-            target: "x86_64-unknown-linux-gnu"
-            cross: true
-          - os: "macos-10.15"
-            target: "x86_64-apple-darwin"
-            cross: true
-          - os: "ubuntu-18.04"
-            target: "x86_64-pc-windows-gnu"
-            cross: true
-            packages: "gcc-mingw-w64"
-          - os: "ubuntu-18.04"
-            target: "armv7-unknown-linux-gnueabihf"
-            cross: true
-            packages: "gcc-arm-linux-gnueabihf"
-    runs-on: "${{ matrix.environment.os }}"
-    name: "${{ matrix.environment.os }} (${{ matrix.environment.target }})"
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/cache@v1
-        with:
-          path: ~/.cargo/registry
-          key: ${{ runner.os }}-${{ matrix.environment.target }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-      - uses: actions/cache@v1
-        with:
-          path: target
-          key: ${{ runner.os }}-${{ matrix.environment.target }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
-      - name: Run tests
-        run: cargo test --verbose
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          target: ${{ matrix.environment.target }}
-          override: true
-      - name: Install system packages
-        if: matrix.environment.packages
-        run: |
-            sudo apt-get update;
-            sudo apt-get install -qq ${{ matrix.environment.packages }};
-      - uses: actions-rs/cargo@v1
-        with:
-          use-cross: ${{ matrix.environment.cross }}
-          command: build
-          args: --release --target ${{ matrix.environment.target }} --verbose
-
-  coverage:
-    needs:
-      - linting
-      - test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Install perftools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libgoogle-perftools-dev
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: nightly
-          override: true
-      - uses: actions-rs/cargo@v1
-        with:
-          command: clean
-      - uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --all-features --no-fail-fast
-        env:
-          CARGO_INCREMENTAL: '0'
-          RUSTFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off'
-      - id: coverage
-        uses: actions-rs/grcov@v0.1
-      - uses: codecov/codecov-action@v1
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          file: ${{ steps.coverage.outputs.report }}
+    coverage:
+        needs:
+            - linting
+            - test
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v2
+            - name: Install perftools
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y libgoogle-perftools-dev
+            - uses: actions-rs/toolchain@v1
+              with:
+                  toolchain: nightly
+                  override: true
+            - uses: actions-rs/cargo@v1
+              with:
+                  command: clean
+            - uses: actions-rs/cargo@v1
+              with:
+                  command: test
+                  args: --all-features --no-fail-fast
+              env:
+                  CARGO_INCREMENTAL: "0"
+                  RUSTFLAGS: "-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off"
+            - id: coverage
+              uses: actions-rs/grcov@v0.1
+            - uses: codecov/codecov-action@v1
+              with:
+                  token: ${{ secrets.CODECOV_TOKEN }}
+                  file: ${{ steps.coverage.outputs.report }}

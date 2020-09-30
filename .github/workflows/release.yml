@@ -1,95 +1,97 @@
 name: Release
 
 on:
-  release:
-    types:
-      - created
+    release:
+        types:
+            - created
 
 jobs:
-  build:
-    strategy:
-      matrix:
-        environment:
-          - os: "ubuntu-18.04"
-            target: "x86_64-unknown-linux-gnu"
-            cross: true
-            exec: jwtinfo
-            artifact-name: "jwtinfo-unix64"
-          - os: "macos-10.15"
-            target: "x86_64-apple-darwin"
-            cross: true
-            exec: jwtinfo
-            artifact-name: "jwtinfo-macos"
-          - os: "ubuntu-18.04"
-            target: "x86_64-pc-windows-gnu"
-            cross: true
-            exec: jwtinfo.exe
-            artifact-name: "jwtinfo-win64.exe"
-            packages: "gcc-mingw-w64"
-          - os: "ubuntu-18.04"
-            target: "armv7-unknown-linux-gnueabihf"
-            cross: true
-            exec: jwtinfo
-            artifact-name: "jwtinfo-armv7"
-            packages: "gcc-arm-linux-gnueabihf"
-    runs-on: "${{ matrix.environment.os }}"
-    name: "${{ matrix.environment.os }} (${{ matrix.environment.target }})"
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/cache@v1
-        with:
-          path: ~/.cargo/registry
-          key: ${{ runner.os }}-${{ matrix.environment.target }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-      - uses: actions/cache@v1
-        with:
-          path: target
-          key: ${{ runner.os }}-${{ matrix.environment.target }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
-      - name: Run tests
-        run: cargo test --verbose
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          target: ${{ matrix.environment.target }}
-          override: true
-      - name: Install system packages
-        if: matrix.environment.packages
-        run: |
-          sudo apt-get update;
-          sudo apt-get install -qq ${{ matrix.environment.packages }};
-      - uses: actions-rs/cargo@v1
-        with:
-          use-cross: ${{ matrix.environment.cross }}
-          command: build
-          args: --release --target ${{ matrix.environment.target }} --verbose
-      - name: Make release executable
-        run: chmod +x target/${{ matrix.environment.target }}/release/${{ matrix.environment.exec }}
-      - name: Gzip artifact
-        run: gzip -f --keep target/${{ matrix.environment.target }}/release/${{ matrix.environment.exec }}
-      - name: Upload Release Asset 
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: target/${{ matrix.environment.target }}/release/${{ matrix.environment.exec }}.gz
-          asset_name: ${{ matrix.environment.artifact-name }}.gz
-          asset_content_type: application/x-gzip
+    build:
+        strategy:
+            matrix:
+                environment:
+                    - os: "ubuntu-18.04"
+                      target: "x86_64-unknown-linux-gnu"
+                      cross: true
+                      exec: jwtinfo
+                      artifact-name: "jwtinfo-unix64"
+                    - os: "macos-10.15"
+                      target: "x86_64-apple-darwin"
+                      cross: true
+                      exec: jwtinfo
+                      artifact-name: "jwtinfo-macos"
+                    - os: "ubuntu-18.04"
+                      target: "x86_64-pc-windows-gnu"
+                      cross: true
+                      exec: jwtinfo.exe
+                      artifact-name: "jwtinfo-win64.exe"
+                      packages: "gcc-mingw-w64"
+                    - os: "ubuntu-18.04"
+                      target: "armv7-unknown-linux-gnueabihf"
+                      cross: true
+                      exec: jwtinfo
+                      artifact-name: "jwtinfo-armv7"
+                      packages: "gcc-arm-linux-gnueabihf"
+        runs-on: "${{ matrix.environment.os }}"
+        name: "${{ matrix.environment.os }} (${{ matrix.environment.target }})"
+        steps:
+            - uses: actions/checkout@v2
+            # # Commented out to try to solve the error "error[E0463]: can't find crate for `serde_derive` which `serde` depends on" on GitHub actions
+            #   - uses: actions/cache@v1
+            #     with:
+            #       path: ~/.cargo/registry
+            #       key: ${{ runner.os }}-${{ matrix.environment.target }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+            #   - uses: actions/cache@v1
+            #     with:
+            #       path: target
+            #       key: ${{ runner.os }}-${{ matrix.environment.target }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+            - name: Run tests
+              run: cargo test --verbose
+            - uses: actions-rs/toolchain@v1
+              with:
+                  toolchain: stable
+                  target: ${{ matrix.environment.target }}
+                  override: true
+            - name: Install system packages
+              if: matrix.environment.packages
+              run: |
+                  sudo apt-get update;
+                  sudo apt-get install -qq ${{ matrix.environment.packages }};
+            - uses: actions-rs/cargo@v1
+              with:
+                  use-cross: ${{ matrix.environment.cross }}
+                  command: build
+                  args: --release --target ${{ matrix.environment.target }} --verbose
+            - name: Make release executable
+              run: chmod +x target/${{ matrix.environment.target }}/release/${{ matrix.environment.exec }}
+            - name: Gzip artifact
+              run: gzip -f --keep target/${{ matrix.environment.target }}/release/${{ matrix.environment.exec }}
+            - name: Upload Release Asset
+              uses: actions/upload-release-asset@v1
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              with:
+                  upload_url: ${{ github.event.release.upload_url }}
+                  asset_path: target/${{ matrix.environment.target }}/release/${{ matrix.environment.exec }}.gz
+                  asset_name: ${{ matrix.environment.artifact-name }}.gz
+                  asset_content_type: application/x-gzip
 
-  release:
-    needs:
-      - build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/cache@v1
-        with:
-          path: ~/.cargo/registry
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-      - uses: actions/cache@v1
-        with:
-          path: target
-          key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
-      - name: Release on Crates.io
-        run: |
-          cargo login ${{ secrets.CARGO_TOKEN }}
-          cargo publish
+    release:
+        needs:
+            - build
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v2
+            # # Commented out to try to solve the error "error[E0463]: can't find crate for `serde_derive` which `serde` depends on" on GitHub actions
+            #   - uses: actions/cache@v1
+            #     with:
+            #       path: ~/.cargo/registry
+            #       key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+            #   - uses: actions/cache@v1
+            #     with:
+            #       path: target
+            #       key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+            - name: Release on Crates.io
+              run: |
+                  cargo login ${{ secrets.CARGO_TOKEN }}
+                  cargo publish
