@@ -61,6 +61,14 @@ impl Token {
     }
 }
 
+impl str::FromStr for Token {
+    type Err = JWTParsePartError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        parse(s)
+    }
+}
+
 /// Represents an error while parsing a JWT token
 #[derive(Debug)]
 pub enum JWTParseError {
