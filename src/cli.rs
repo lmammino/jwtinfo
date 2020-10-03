@@ -37,7 +37,7 @@ fn main() -> io::Result<()> {
         }
     };
 
-    println!("{}", jwt_token.body);
+    println!("{}", jwt_token.body.to_string());
 
     Ok(())
 }
