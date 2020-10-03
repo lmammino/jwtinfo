@@ -9,6 +9,13 @@ fn assert_parse_successfully() {
 }
 
 #[test]
+fn assert_parse_successfullt_from_str() {
+    let token = String::from("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmb28iOiJiYXIifQ.dtxWM6MIcgoeMgH87tGvsNDY6cHWL6MGW4LeYvnm1JA");
+    let jwt_token = token.parse::<Token>();
+    assert_eq!(String::from("{\"foo\":\"bar\"}"), jwt_token.unwrap().body);
+}
+
+#[test]
 fn assert_parse_fails_due_to_invalid_header() {
     let token = String::from(
         "invalid_header.eyJmb28iOiJiYXIifQ.dtxWM6MIcgoeMgH87tGvsNDY6cHWL6MGW4LeYvnm1JA",

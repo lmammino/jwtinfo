@@ -19,6 +19,16 @@
 //!   Err(e) => panic!(e)
 //! }
 //! ```
+//!
+//! Since `jwt::Token` implements `str::FromStr`, you can also do the following:
+//!
+//! ```rust
+//! use jwtinfo::{jwt};
+//!
+//! let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c".parse::<jwt::Token>().unwrap();
+//! assert_eq!(token.header.alg, "HS256");
+//! assert_eq!(token.body, "{\"sub\":\"1234567890\",\"name\":\"John Doe\",\"iat\":1516239022}");
+//! ```
 
 use serde::Deserialize;
 use std::error::Error;
@@ -58,6 +68,14 @@ impl Token {
             body,
             signature,
         }
+    }
+}
+
+impl str::FromStr for Token {
+    type Err = JWTParsePartError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        parse(s)
     }
 }
 
