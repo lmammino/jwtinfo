@@ -2,7 +2,7 @@
 
 //! # jwtinfo
 //!
-//! `jwt` is a command line utility and a small library to parse JWT tokens
+//! `jwt` is a command line utility and a small library to parse JWT
 //!
 //! ## Installation
 //!

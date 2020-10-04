@@ -10,11 +10,11 @@
 [![Gitpod Ready-to-Code](https://img.shields.io/badge/Gitpod-Ready--to--Code-blue?logo=gitpod)](https://gitpod.io/#https://github.com/lmammino/jwtinfo) 
 
 
-A command line tool to get information about JWT tokens
+A command line tool to get information about [JWTs](https://tools.ietf.org/html/rfc7519) (Json Web Tokens).
 
 ## Usage
 
-`jwtinfo` is a command line interface that allows you to inspect a given JWT token. The tool currently allows to see the body of the token in JSON format. It accepts a single command line argument which should be a valid JWT token.
+`jwtinfo` is a command line interface that allows you to inspect a given JWT. The tool currently allows to see the body of the token in JSON format. It accepts a single command line argument which should be a valid JWT.
 
 Here's an example:
 
@@ -81,7 +81,7 @@ Pre-compiled binaries for x64 (Windows, MacOs and Unix) and ARMv7 are available 
 
 #### Alternatives
 
-If you don't want to install a binary for debugging JWT tokens, a super simple `bash` alternative called [`jwtinfo.sh`](https://gist.github.com/lmammino/920ee0699af627a3492f86c607c859f6) is available.
+If you don't want to install a binary for debugging JWT, a super simple `bash` alternative called [`jwtinfo.sh`](https://gist.github.com/lmammino/920ee0699af627a3492f86c607c859f6) is available.
 
 
 ## Programmatic usage

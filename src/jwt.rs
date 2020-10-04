@@ -1,10 +1,10 @@
 //! # JWT
 //!
-//! `jwt` is a collection of utilities to parse JWT tokens
+//! `jwt` is a collection of utilities to parse JWTs (Json Web Tokens)
 //!
 //! ## Examples
 //!
-//! To parse a given JWT token:
+//! To parse a given JWT as a string:
 //!
 //! ```rust
 //! use jwtinfo::{jwt};
@@ -39,7 +39,7 @@ lazy_static! {
         base64::Config::new(base64::CharacterSet::UrlSafe, false);
 }
 
-/// Represents a JWT token, composed by a header, a body and a signature
+/// Represents a JWT, composed by a header, a body and a signature
 #[derive(Debug)]
 pub struct Token {
     /// the header part of the token
@@ -69,7 +69,7 @@ impl str::FromStr for Token {
     }
 }
 
-/// Represents an error while parsing a JWT token
+/// Represents an error while parsing a JWT
 #[derive(Debug)]
 pub enum JWTParseError {
     /// Indicates that an expected section (Header, Body or Signature) was not found
@@ -111,7 +111,7 @@ impl From<serde_json::error::Error> for JWTParseError {
     }
 }
 
-/// Represents an error while parsing a given part of a JWT token
+/// Represents an error while parsing a given part of a JWT
 #[derive(Debug)]
 pub enum JWTParsePartError {
     /// Error while parsing the Header part

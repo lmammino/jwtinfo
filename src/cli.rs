@@ -11,7 +11,7 @@ extern crate lazy_static;
 fn main() -> io::Result<()> {
     let matches = App::new("jwtinfo")
         .version(env!("CARGO_PKG_VERSION"))
-        .about("Shows information about a JWT token")
+        .about("Shows information about a JWT (Json Web Token)")
         .arg(
             Arg::with_name("header")
                 .short("H")
@@ -22,7 +22,7 @@ fn main() -> io::Result<()> {
         )
         .arg(
             Arg::with_name("token")
-                .help("the JWT token as a string (use \"-\" to read from stdin)")
+                .help("the JWT as a string (use \"-\" to read from stdin)")
                 .required(true)
                 .index(1),
         )
