@@ -13,6 +13,14 @@ fn main() -> io::Result<()> {
         .version(env!("CARGO_PKG_VERSION"))
         .about("Shows information about a JWT token")
         .arg(
+            Arg::with_name("header")
+                .short("H")
+                .long("header")
+                .help("Shows the token header rather than the body")
+                .required(false)
+                .takes_value(false),
+        )
+        .arg(
             Arg::with_name("token")
                 .help("the JWT token as a string (use \"-\" to read from stdin)")
                 .required(true)
@@ -37,7 +45,11 @@ fn main() -> io::Result<()> {
         }
     };
 
-    println!("{}", jwt_token.body);
+    if matches.is_present("header") {
+        println!("{}", jwt_token.header.to_string());
+    } else {
+        println!("{}", jwt_token.body.to_string());
+    }
 
     Ok(())
 }

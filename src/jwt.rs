@@ -13,8 +13,8 @@
 //! match jwt::parse(token_str) {
 //!   Ok(token) => {
 //!     // do something with token
-//!     assert_eq!(token.header.alg, "HS256");
-//!     assert_eq!(token.body, "{\"sub\":\"1234567890\",\"name\":\"John Doe\",\"iat\":1516239022}");
+//!     assert_eq!(token.header.to_string(), "{\"alg\":\"HS256\",\"typ\":\"JWT\"}");
+//!     assert_eq!(token.body.to_string(), "{\"iat\":1516239022,\"name\":\"John Doe\",\"sub\":\"1234567890\"}");
 //!   }
 //!   Err(e) => panic!(e)
 //! }
@@ -26,11 +26,10 @@
 //! use jwtinfo::{jwt};
 //!
 //! let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c".parse::<jwt::Token>().unwrap();
-//! assert_eq!(token.header.alg, "HS256");
-//! assert_eq!(token.body, "{\"sub\":\"1234567890\",\"name\":\"John Doe\",\"iat\":1516239022}");
+//! assert_eq!(token.header.to_string(), "{\"alg\":\"HS256\",\"typ\":\"JWT\"}");
+//! assert_eq!(token.body.to_string(), "{\"iat\":1516239022,\"name\":\"John Doe\",\"sub\":\"1234567890\"}");
 //! ```
 
-use serde::Deserialize;
 use std::error::Error;
 use std::fmt;
 use std::str;
@@ -40,29 +39,20 @@ lazy_static! {
         base64::Config::new(base64::CharacterSet::UrlSafe, false);
 }
 
-/// Represents the header part of a JWT token
-#[derive(Deserialize, Debug)]
-pub struct Header {
-    /// the type of token, must be "JWT"
-    typ: String,
-    /// the signature algorithm used for this token
-    pub alg: String,
-}
-
 /// Represents a JWT token, composed by a header, a body and a signature
 #[derive(Debug)]
 pub struct Token {
     /// the header part of the token
-    pub header: Header,
+    pub header: serde_json::Value,
     /// the body (or payload) of the token
-    pub body: String,
+    pub body: serde_json::Value,
     /// the signature data of the token
     pub signature: Vec<u8>,
 }
 
 impl Token {
     /// Creates a new token from scratch
-    fn new(header: Header, body: String, signature: Vec<u8>) -> Self {
+    fn new(header: serde_json::Value, body: serde_json::Value, signature: Vec<u8>) -> Self {
         Self {
             header,
             body,
@@ -159,21 +149,24 @@ fn parse_base64_string(s: &str) -> Result<String, JWTParseError> {
 }
 
 #[doc(hidden)]
-fn parse_header(raw_header: Option<&str>) -> Result<Header, JWTParseError> {
+fn parse_header(raw_header: Option<&str>) -> Result<serde_json::Value, JWTParseError> {
     match raw_header {
         None => Err(JWTParseError::MissingSection()),
         Some(s) => {
             let header_str = parse_base64_string(s)?;
-            Ok(serde_json::from_str::<Header>(&header_str)?)
+            Ok(serde_json::from_str(&header_str)?)
         }
     }
 }
 
 #[doc(hidden)]
-fn parse_body(raw_body: Option<&str>) -> Result<String, JWTParseError> {
+fn parse_body(raw_body: Option<&str>) -> Result<serde_json::Value, JWTParseError> {
     match raw_body {
         None => Err(JWTParseError::MissingSection()),
-        Some(s) => Ok(parse_base64_string(s)?),
+        Some(s) => {
+            let body_str = parse_base64_string(s)?;
+            Ok(serde_json::from_str(&body_str)?)
+        }
     }
 }
 

@@ -4,15 +4,29 @@ use super::*;
 #[test]
 fn assert_parse_successfully() {
     let token = String::from("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmb28iOiJiYXIifQ.dtxWM6MIcgoeMgH87tGvsNDY6cHWL6MGW4LeYvnm1JA");
-    let jwt_token = parse(&token);
-    assert_eq!(String::from("{\"foo\":\"bar\"}"), jwt_token.unwrap().body);
+    let jwt_token = parse(&token).unwrap();
+    assert_eq!(
+        String::from("{\"alg\":\"HS256\",\"typ\":\"JWT\"}"),
+        jwt_token.header.to_string()
+    );
+    assert_eq!(
+        String::from("{\"foo\":\"bar\"}"),
+        jwt_token.body.to_string()
+    );
 }
 
 #[test]
 fn assert_parse_successfullt_from_str() {
     let token = String::from("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmb28iOiJiYXIifQ.dtxWM6MIcgoeMgH87tGvsNDY6cHWL6MGW4LeYvnm1JA");
-    let jwt_token = token.parse::<Token>();
-    assert_eq!(String::from("{\"foo\":\"bar\"}"), jwt_token.unwrap().body);
+    let jwt_token = token.parse::<Token>().unwrap();
+    assert_eq!(
+        String::from("{\"alg\":\"HS256\",\"typ\":\"JWT\"}"),
+        jwt_token.header.to_string()
+    );
+    assert_eq!(
+        String::from("{\"foo\":\"bar\"}"),
+        jwt_token.body.to_string()
+    );
 }
 
 #[test]

@@ -28,6 +28,18 @@ Which will print:
 {"sub":"1234567890","name":"John Doe","iat":1516239022}
 ```
 
+If you want to visualize the token header (rather than the body), you can do that by passing the `--header` flag:
+
+```bash
+jwtinfo --header eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+```
+
+Which will print:
+
+```json
+{"alg":"HS256","typ":"JWT"}
+```
+
 You can combine the tool with other command line utilities, for instance [`jq`](https://stedolan.github.io/jq/):
 
 ```bash
