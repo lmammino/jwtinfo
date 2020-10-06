@@ -84,12 +84,13 @@ pub enum JWTParseError {
 
 impl fmt::Display for JWTParseError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            JWTParseError::MissingSection() => write!(f, "{}", "Missing token section".to_string()),
-            JWTParseError::InvalidUtf8(e) => write!(f, "UTF8 error, {}", e),
-            JWTParseError::InvalidBase64(e) => write!(f, "Base64 error, {}", e),
-            JWTParseError::InvalidJSON(e) => write!(f, "JSON error, {}", e),
-        }
+        let message = match self {
+            JWTParseError::MissingSection() => "Missing token section".to_string(),
+            JWTParseError::InvalidUtf8(e) => format!("UTF8 error, {}", e),
+            JWTParseError::InvalidBase64(e) => format!("Base64 error, {}", e),
+            JWTParseError::InvalidJSON(e) => format!("JSON error, {}", e),
+        };
+        write!(f, "{}", message)
     }
 }
 
@@ -126,16 +127,15 @@ pub enum JWTParsePartError {
 
 impl fmt::Display for JWTParsePartError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            JWTParsePartError::Header(e) => write!(f, "{}", format!("Invalid Header: {}", e)),
-            JWTParsePartError::Body(e) => write!(f, "{}", format!("Invalid Body: {}", e)),
-            JWTParsePartError::Signature(e) => write!(f, "{}", format!("Invalid Signature: {}", e)),
-            JWTParsePartError::UnexpectedPart() => write!(
-                f,
-                "{}",
+        let message = match self {
+            JWTParsePartError::Header(e) => format!("Invalid Header: {}", e),
+            JWTParsePartError::Body(e) => format!("Invalid Body: {}", e),
+            JWTParsePartError::Signature(e) => format!("Invalid Signature: {}", e),
+            JWTParsePartError::UnexpectedPart() => {
                 "Error: Unexpected fragment after signature".to_string()
-            ),
-        }
+            }
+        };
+        write!(f, "{}", message)
     }
 }
 

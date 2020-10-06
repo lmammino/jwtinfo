@@ -45,11 +45,12 @@ fn main() -> io::Result<()> {
         }
     };
 
-    if matches.is_present("header") {
-        println!("{}", jwt_token.header.to_string());
+    let part = if matches.is_present("header") {
+        jwt_token.header
     } else {
-        println!("{}", jwt_token.body.to_string());
-    }
+        jwt_token.body
+    };
+    println!("{}", part.to_string());
 
     Ok(())
 }
