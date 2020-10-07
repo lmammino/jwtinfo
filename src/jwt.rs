@@ -183,8 +183,8 @@ fn parse_signature(raw_signature: Option<&str>) -> Result<Vec<u8>, JWTParseError
 /// # Errors
 ///
 /// This function will return a `JWTParsePartError` if the token cannot be successfully parsed
-pub fn parse(token: &str) -> Result<Token, JWTParsePartError> {
-    let mut parts = token.split('.');
+pub fn parse<T: AsRef<str>>(token: T) -> Result<Token, JWTParsePartError> {
+    let mut parts = token.as_ref().split('.');
     let header = parse_header(parts.next()).map_err(JWTParsePartError::Header)?;
     let body = parse_body(parts.next()).map_err(JWTParsePartError::Body)?;
     let signature = parse_signature(parts.next()).map_err(JWTParsePartError::Signature)?;
