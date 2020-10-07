@@ -1,26 +1,26 @@
 [package]
 name = "jwtinfo"
-description = "Command line tool to get information about JWT tokens"
-categories = [
-    "command-line-interface", # unnecessary?
-    "command-line-utilities",
-    "cryptography",
-    "development-tools",
-    "development-tools::debugging"
-    # add "jwt",
-    # add "web",
-]
+description = "Command line tool to get information about JWTs (Json Web Tokens)"
+categories = ["command-line-interface", "command-line-utilities", "cryptography", "development-tools", "development-tools::debugging"]
 repository = "https://github.com/lmammino/jwtinfo"
 documentation = "https://github.com/lmammino/jwtinfo"
 readme = "README.md"
-version = "0.1.7"
+version = "0.2.1"
 authors = ["Luciano Mammino", "Stefano Abalsamo"]
 edition = "2018"
 license = "MIT"
 
 [dependencies]
-clap = "2.33.0"
-base64 = "0.11.0"
+clap = "2.33"
+base64 = "0.11"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-lazy_static = "1.4.0"
+lazy_static = "1.4"
+
+[lib]
+name = "jwtinfo"
+path = "src/main.rs"
+
+[[bin]]
+name = "jwtinfo"
+path = "src/cli.rs"

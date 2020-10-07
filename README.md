@@ -3,22 +3,18 @@
 [![build badge](https://github.com/lmammino/jwtinfo/workflows/Rust/badge.svg)](https://github.com/lmammino/jwtinfo/actions?query=workflow%3ARust)
 [![codecov](https://codecov.io/gh/lmammino/jwtinfo/branch/master/graph/badge.svg)](https://codecov.io/gh/lmammino/jwtinfo)
 [![crates.io badge](https://img.shields.io/crates/v/jwtinfo.svg)](https://crates.io/crates/jwtinfo)
+[![Documentation](https://docs.rs/jwtinfo/badge.svg)](https://docs.rs/jwtinfo)
 [![rustc badge](https://img.shields.io/badge/rustc-1.40+-lightgray.svg)](https://blog.rust-lang.org/2019/12/19/Rust-1.40.0.html)
 [![Clippy Linting Result](https://img.shields.io/badge/clippy-<3-yellowgreen)](https://github.com/rust-lang/rust-clippy)
 [![License: MIT OR Apache-2.0](https://img.shields.io/crates/l/jwtinfo.svg)](#license)
 [![Gitpod Ready-to-Code](https://img.shields.io/badge/Gitpod-Ready--to--Code-blue?logo=gitpod)](https://gitpod.io/#https://github.com/lmammino/jwtinfo) 
 
 
-<!--
-- Consider compliance with RFC https://tools.ietf.org/html/rfc7519#section-7.2
-- Document which platforms (OS, CPU architecture) are supported.
--->
-
-A command line tool to get information about JWT tokens
+A command line tool to get information about [JWTs](https://tools.ietf.org/html/rfc7519) (Json Web Tokens).
 
 ## Usage
 
-`jwtinfo` is a command line interface that allows you to inspect a given JWT token. The tool currently allows to see the body of the token in JSON format. It accepts a single command line argument which should be a valid JWT token.
+`jwtinfo` is a command line interface that allows you to inspect a given JWT. The tool currently allows to see the body of the token in JSON format. It accepts a single command line argument which should be a valid JWT.
 
 Here's an example:
 
@@ -30,6 +26,18 @@ Which will print:
 
 ```json
 {"sub":"1234567890","name":"John Doe","iat":1516239022}
+```
+
+If you want to visualize the token header (rather than the body), you can do that by passing the `--header` flag:
+
+```bash
+jwtinfo --header eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+```
+
+Which will print:
+
+```json
+{"alg":"HS256","typ":"JWT"}
 ```
 
 You can combine the tool with other command line utilities, for instance [`jq`](https://stedolan.github.io/jq/):
@@ -73,7 +81,36 @@ Pre-compiled binaries for x64 (Windows, MacOs and Unix) and ARMv7 are available 
 
 #### Alternatives
 
-If you don't want to install a binary for debugging JWT tokens, a super simple `bash` alternative called [`jwtinfo.sh`](https://gist.github.com/lmammino/920ee0699af627a3492f86c607c859f6) is available.
+If you don't want to install a binary for debugging JWT, a super simple `bash` alternative called [`jwtinfo.sh`](https://gist.github.com/lmammino/920ee0699af627a3492f86c607c859f6) is available.
+
+
+## Programmatic usage
+
+Install with cargo:
+
+```toml
+[dependencies]
+jwtinfo = "*"
+```
+
+Then use it in your code
+
+```rust
+use jwtinfo::{jwt};
+let token_str = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
+let token = jwt::parse(token_str).unwrap();
+assert_eq!(token.header.to_string(), "{\"alg\":\"HS256\",\"typ\":\"JWT\"}");
+assert_eq!(token.body.to_string(), "{\"iat\":1516239022,\"name\":\"John Doe\",\"sub\":\"1234567890\"}");
+```
+
+Since `jwt:Token` implements `str::FromStr`, you can also do the following:
+
+```rust
+use jwtinfo::{jwt};
+let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c".parse::<jwt::Token>().unwrap();
+assert_eq!(token.header.to_string(), "{\"alg\":\"HS256\",\"typ\":\"JWT\"}");
+assert_eq!(token.body.to_string(), "{\"iat\":1516239022,\"name\":\"John Doe\",\"sub\":\"1234567890\"}");
+```
 
 
 ## Coverage reports
@@ -125,6 +162,8 @@ Your coverage report will be available as `tarpaulin-report.html` in the root of
 ## Credits
 
 A special thank you goes to the [Rust Reddit community](https://www.reddit.com/r/rust/) for providing a lot of useful suggestions on how to improve this project. A special thanks goes to: [mardiros](https://www.reddit.com/user/mardiros/), [matthieum](https://www.reddit.com/user/matthieum/), [steveklabnik1](https://www.reddit.com/user/steveklabnik1/), [ESBDB](https://www.reddit.com/user/ESBDB/), [Dushistov](https://www.reddit.com/user/Dushistov/), [Doddzilla7](https://www.reddit.com/user/Doddzilla7/). Another huge thank you goes to the [Rust stackoverflow community](https://chat.stackoverflow.com/rooms/62927/rust), especially to [Denys Séguret](https://chat.stackoverflow.com/users/263525).
+
+Big thanks also go to [Tim McNamara](https://twitter.com/timClicks) for conducting a [live code review](https://www.twitch.tv/videos/748089503) of this codebase.
 
 
 ## Contributing
