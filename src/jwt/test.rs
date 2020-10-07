@@ -159,3 +159,16 @@ fn assert_fails_with_non_valid_token() {
         "Invalid Header: Base64 error, Encoded text cannot have a 6-bit remainder."
     );
 }
+
+#[test]
+fn assert_fails_with_token_from_invalid_lossy_utf8() {
+    let token = String::from_utf8_lossy(
+        b"\x00\x09\x52\x09\x00\x75\x00\x09\x73\x00\x09\x74\x00\x09\x00\x09",
+    );
+    let parsed_token = parse(&token);
+    let err = format!("{}", parsed_token.unwrap_err());
+    assert_eq!(
+        err,
+        "Invalid Header: Base64 error, Invalid byte 0, offset 0."
+    );
+}
