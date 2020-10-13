@@ -1,4 +1,5 @@
 use clap::{App, Arg};
+use serde_json::to_string_pretty;
 use std::io::{self, Read};
 use std::process;
 
@@ -26,7 +27,14 @@ fn main() -> io::Result<()> {
                 .required(true)
                 .index(1),
         )
+        .arg(
+            Arg::with_name("pretty")
+                .short("P")
+                .long("pretty")
+                .help("Pretty prints the JWT"),
+        )
         .get_matches();
+    let should_pretty_print = matches.is_present("pretty");
 
     let mut token = matches.value_of("token").unwrap();
     let mut buffer = String::new();
@@ -50,7 +58,14 @@ fn main() -> io::Result<()> {
     } else {
         jwt_token.body
     };
-    println!("{}", part.to_string());
+
+    let stringified = if should_pretty_print {
+        to_string_pretty(&part)?
+    } else {
+        part.to_string()
+    };
+
+    println!("{}", stringified);
 
     Ok(())
 }
