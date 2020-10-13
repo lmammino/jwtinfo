@@ -163,7 +163,7 @@ Your coverage report will be available as `tarpaulin-report.html` in the root of
 
 A special thank you goes to the [Rust Reddit community](https://www.reddit.com/r/rust/) for providing a lot of useful suggestions on how to improve this project. A special thanks goes to: [mardiros](https://www.reddit.com/user/mardiros/), [matthieum](https://www.reddit.com/user/matthieum/), [steveklabnik1](https://www.reddit.com/user/steveklabnik1/), [ESBDB](https://www.reddit.com/user/ESBDB/), [Dushistov](https://www.reddit.com/user/Dushistov/), [Doddzilla7](https://www.reddit.com/user/Doddzilla7/). Another huge thank you goes to the [Rust stackoverflow community](https://chat.stackoverflow.com/rooms/62927/rust), especially to [Denys Séguret](https://chat.stackoverflow.com/users/263525).
 
-Big thanks also go to [Tim McNamara](https://twitter.com/timClicks) for conducting a [live code review](https://www.twitch.tv/videos/748089503) of this codebase.
+Big thanks also go to [Tim McNamara](https://twitter.com/timClicks) for conducting a [live code review](https://loige.co/learning-rust-through-open-source-and-live-code-reviews) of this codebase.
 
 
 ## Contributing
