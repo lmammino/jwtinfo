@@ -33,10 +33,20 @@
 use std::error::Error;
 use std::fmt;
 use std::str;
+use std::sync::OnceLock;
 
-lazy_static! {
-    static ref BASE64_CONFIG: base64::Config =
-        base64::Config::new(base64::CharacterSet::UrlSafe, false);
+use base64::{
+    alphabet,
+    engine::{self, general_purpose},
+    Engine as _,
+};
+
+static BASE64_ENGINE: OnceLock<engine::GeneralPurpose> = OnceLock::new();
+
+#[inline]
+fn get_base64() -> &'static engine::GeneralPurpose {
+    BASE64_ENGINE
+        .get_or_init(|| engine::GeneralPurpose::new(&alphabet::URL_SAFE, general_purpose::NO_PAD))
 }
 
 /// Represents a JWT, composed by a header, a body and a signature
@@ -143,7 +153,7 @@ impl Error for JWTParsePartError {}
 
 #[doc(hidden)]
 fn parse_base64_string(s: &str) -> Result<String, JWTParseError> {
-    let s = base64::decode_config(s, *BASE64_CONFIG)?;
+    let s = get_base64().decode(s)?;
     let s = str::from_utf8(&s)?;
     Ok(s.to_string())
 }
@@ -174,7 +184,7 @@ fn parse_body(raw_body: Option<&str>) -> Result<serde_json::Value, JWTParseError
 fn parse_signature(raw_signature: Option<&str>) -> Result<Vec<u8>, JWTParseError> {
     match raw_signature {
         None => Err(JWTParseError::MissingSection()),
-        Some(s) => Ok(base64::decode_config(s, *BASE64_CONFIG)?),
+        Some(s) => Ok(get_base64().decode(s)?),
     }
 }
 
