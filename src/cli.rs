@@ -5,9 +5,6 @@ use std::process;
 
 mod jwt;
 
-#[macro_use]
-extern crate lazy_static;
-
 #[doc(hidden)]
 fn main() -> io::Result<()> {
     let matches = Command::new("jwtinfo")
