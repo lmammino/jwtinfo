@@ -76,26 +76,19 @@ jobs:
             - linting
             - test
         runs-on: ubuntu-latest
+        env:
+            CARGO_TERM_COLOR: always
         steps:
             - uses: actions/checkout@v4
-            - name: Install perftools
-              run: |
-                  sudo apt-get update
-                  sudo apt-get install -y libgoogle-perftools-dev
-            - name: Install rust
-              uses: dtolnay/rust-toolchain@master
+            - name: Install Rust
+              run: rustup update stable
+            - name: Install cargo-llvm-cov
+              uses: taiki-e/install-action@cargo-llvm-cov
+            - name: Generate code coverage
+              run: cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
+            - name: Upload coverage to Codecov
+              uses: codecov/codecov-action@v3
               with:
-                  toolchain: nightly
-            - name: Cargo clean
-              run: cargo clean
-            - name: Cargo test
-              run: cargo test --all-features --no-fail-fast
-              env:
-                  CARGO_INCREMENTAL: "0"
-                  RUSTFLAGS: "-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off"
-            - id: coverage
-              uses: actions-rs/grcov@v0.1
-            - uses: codecov/codecov-action@v1
-              with:
-                  token: ${{ secrets.CODECOV_TOKEN }}
-                  file: ${{ steps.coverage.outputs.report }}
+                token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
+                files: lcov.info
+                fail_ci_if_error: true
