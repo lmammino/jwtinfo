@@ -66,7 +66,7 @@ At this point `jwtinfo` will be available as a binary in your system.
 The following script will download and install precompiled binaries from the latest GitHub release
 
 ```bash
-curl https://raw.githubusercontent.com/lmammino/jwtinfo/master/install.sh | sh
+curl https://raw.githubusercontent.com/lmammino/jwtinfo/main/install.sh | sh
 ```
 
 By default it will install the binary in `/usr/local/bin`. You can customize this by setting the `INSTALL_DIRECTORY` environment variable before running the script (e.g. `INSTALL_DIRECTORY=$HOME` will install the binary in `$HOME/bin`).

@@ -13,7 +13,7 @@
 # - DEP_ARCH (optional): use a specific value for ARCH (mostly for testing)
 #
 # You can install using this script:
-# $ curl https://raw.githubusercontent.com/lmammino/jwtinfo/master/install.sh | sh
+# $ curl https://raw.githubusercontent.com/lmammino/jwtinfo/main/install.sh | sh
 
 set -e
 

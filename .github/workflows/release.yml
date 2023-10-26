@@ -45,7 +45,7 @@ jobs:
         runs-on: "${{ matrix.environment.os }}"
         name: "${{ matrix.environment.os }} (${{ matrix.environment.target }})"
         steps:
-            - uses: actions/checkout@v2
+            - uses: actions/checkout@v4
             - name: Run tests
               run: cargo test --verbose
             - uses: actions-rs/toolchain@v1
@@ -82,7 +82,7 @@ jobs:
             - build
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v2
+            - uses: actions/checkout@v4
             - name: Release on Crates.io
               run: |
                   cargo login ${{ secrets.CARGO_TOKEN }}
