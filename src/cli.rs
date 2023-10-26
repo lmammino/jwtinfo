@@ -1,4 +1,4 @@
-use clap::{arg, Command};
+use clap::{Arg, ArgAction, Command};
 use serde_json::to_string_pretty;
 use std::io::{self, Read};
 use std::process;
@@ -10,10 +10,23 @@ fn main() -> io::Result<()> {
     let matches = Command::new("jwtinfo")
         .version(env!("CARGO_PKG_VERSION"))
         .about("Shows information about a JWT (Json Web Token)")
-        .arg(arg!(-h --header ... "Shows the token header rather than the body"))
-        .arg(arg!(<token> ... "the JWT as a string (use \"-\" to read from stdin)"))
-        .arg(arg!(-P --pretty ... "Pretty prints the JWT"))
+        .args([
+            Arg::new("header")
+                .short('H')
+                .long("header")
+                .action(ArgAction::SetTrue)
+                .help("Shows the token header rather than the body"),
+            Arg::new("pretty")
+                .short('P')
+                .long("pretty")
+                .action(ArgAction::SetTrue)
+                .help("Pretty prints the JWT header or body"),
+            Arg::new("token")
+                .index(1)
+                .help("the JWT as a string (use \"-\" to read from stdin)"),
+        ])
         .get_matches();
+
     let should_pretty_print = matches.get_flag("pretty");
 
     let mut token = matches.get_one::<String>("token").unwrap().clone();
