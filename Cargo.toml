@@ -2,17 +2,23 @@
 name = "jwtinfo"
 description = "Command line tool to get information about JWTs (Json Web Tokens)"
 keywords = ["JWT", "token", "web", "json"]
-categories = ["command-line-interface", "command-line-utilities", "cryptography", "development-tools", "development-tools::debugging"]
+categories = [
+    "command-line-interface",
+    "command-line-utilities",
+    "cryptography",
+    "development-tools",
+    "development-tools::debugging",
+]
 repository = "https://github.com/lmammino/jwtinfo"
 documentation = "https://github.com/lmammino/jwtinfo"
 readme = "README.md"
-version = "0.4.0"
+version = "0.4.1"
 authors = ["Luciano Mammino", "Stefano Abalsamo"]
 edition = "2018"
 license = "MIT"
 
 [dependencies]
-clap = "4.3"
+clap = "4.4.7"
 base64 = "0.21"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
