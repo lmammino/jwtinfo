@@ -21,15 +21,10 @@ jobs:
                       exec: jwtinfo
                       artifact-name: "jwtinfo-macos"
                     - os: "macos-latest"
-
                       target: "aarch64-apple-darwin"
-
                       cross: true
-
                       exec: jwtinfo
-
                       artifact-name: "jwtinfo-macos-silicon"
-         
                     - os: "ubuntu-latest"
                       target: "x86_64-pc-windows-gnu"
                       cross: true

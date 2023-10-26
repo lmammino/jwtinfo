@@ -45,21 +45,31 @@ jobs:
             - uses: actions/checkout@v4
             - name: Run tests
               run: cargo test --verbose
-            - uses: actions-rs/toolchain@v1
+            - name: Install rust
+              uses: dtolnay/rust-toolchain@master
               with:
                   toolchain: stable
                   target: ${{ matrix.environment.target }}
-                  override: true
+            - uses: actions/cache@v3
+              with:
+                path: |
+                    ~/.cargo/registry
+                    ~/.cargo/git
+                    target
+                key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
             - name: Install system packages
               if: matrix.environment.packages
               run: |
                   sudo apt-get update;
                   sudo apt-get install -qq ${{ matrix.environment.packages }};
-            - uses: actions-rs/cargo@v1
-              with:
-                  use-cross: ${{ matrix.environment.cross }}
-                  command: build
-                  args: --release --target ${{ matrix.environment.target }} --verbose
+            - name: Install cross
+              run: cargo install cross --git https://github.com/cross-rs/cross
+            - name: Build (with cross)
+              if: ${{ matrix.environment.cross }}
+              run: cross build --target ${{ matrix.environment.target }}
+            - name: Build (without cross)
+              if: ${{ !matrix.environment.cross }}
+              run: cargo build
 
     coverage:
         needs:
@@ -72,17 +82,14 @@ jobs:
               run: |
                   sudo apt-get update
                   sudo apt-get install -y libgoogle-perftools-dev
-            - uses: actions-rs/toolchain@v1
+            - name: Install rust
+              uses: dtolnay/rust-toolchain@master
               with:
                   toolchain: nightly
-                  override: true
-            - uses: actions-rs/cargo@v1
-              with:
-                  command: clean
-            - uses: actions-rs/cargo@v1
-              with:
-                  command: test
-                  args: --all-features --no-fail-fast
+            - name: Cargo clean
+              run: cargo clean
+            - name: Cargo test
+              run: cargo test --all-features --no-fail-fast
               env:
                   CARGO_INCREMENTAL: "0"
                   RUSTFLAGS: "-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off"
