@@ -2,8 +2,7 @@ use clap::{Arg, ArgAction, Command};
 use serde_json::to_string_pretty;
 use std::io::{self, Read};
 use std::process;
-
-mod jwt;
+use jwtinfo::jwt;
 
 #[doc(hidden)]
 fn main() -> io::Result<()> {
@@ -28,6 +27,11 @@ fn main() -> io::Result<()> {
         .get_matches();
 
     let should_pretty_print = matches.get_flag("pretty");
+
+    if !matches.get_one::<String>("token").is_some() {
+        eprintln!("Error: No token provided, see --help for usage");
+        process::exit(1);
+    }
 
     let mut token = matches.get_one::<String>("token").unwrap().clone();
     let mut buffer = String::new();
