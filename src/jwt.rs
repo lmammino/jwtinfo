@@ -132,6 +132,12 @@ pub enum JWTParsePartError {
     Body(JWTParseError),
     /// Error while parsing the Signature part
     Signature(JWTParseError),
+    /// Error while parsing the Encryption Key of a JWE
+    EncryptionKey(JWTParseError),
+    /// Error while parsing the Encryption IV of a JWE
+    EncryptionIV(JWTParseError),
+    /// Error while parsing the Authentication Tag of a JWE
+    AuthenticationTag(JWTParseError),
     /// Error because an additional part was found after the Signature part
     UnexpectedPart(),
 }
@@ -142,6 +148,9 @@ impl fmt::Display for JWTParsePartError {
             JWTParsePartError::Header(e) => format!("Invalid Header: {}", e),
             JWTParsePartError::Body(e) => format!("Invalid Body: {}", e),
             JWTParsePartError::Signature(e) => format!("Invalid Signature: {}", e),
+            JWTParsePartError::EncryptionKey(e) => format!("Invalid Encryption Key: {}", e),
+            JWTParsePartError::EncryptionIV(e) => format!("Invalid Encryption IV: {}", e),
+            JWTParsePartError::AuthenticationTag(e) => format!("Invalid Authentication Tag: {}", e),
             JWTParsePartError::UnexpectedPart() => {
                 "Error: Unexpected fragment after signature".to_string()
             }
@@ -189,6 +198,32 @@ fn parse_signature(raw_signature: Option<&str>) -> Result<Vec<u8>, JWTParseError
     }
 }
 
+#[doc(hidden)]
+fn parse_encryption_key(raw_encryption_key: Option<&str>) -> Result<Vec<u8>, JWTParseError> {
+    match raw_encryption_key {
+        None => Err(JWTParseError::MissingSection()),
+        Some(s) => Ok(get_base64().decode(s)?),
+    }
+}
+
+#[doc(hidden)]
+fn parse_encryption_iv(raw_encryption_iv: Option<&str>) -> Result<Vec<u8>, JWTParseError> {
+    match raw_encryption_iv {
+        None => Err(JWTParseError::MissingSection()),
+        Some(s) => Ok(get_base64().decode(s)?),
+    }
+}
+
+#[doc(hidden)]
+fn parse_authentication_tag(
+    raw_authentication_tag: Option<&str>,
+) -> Result<Vec<u8>, JWTParseError> {
+    match raw_authentication_tag {
+        None => Err(JWTParseError::MissingSection()),
+        Some(s) => Ok(get_base64().decode(s)?),
+    }
+}
+
 /// Parses a token from a string
 ///
 /// # Errors
@@ -197,14 +232,39 @@ fn parse_signature(raw_signature: Option<&str>) -> Result<Vec<u8>, JWTParseError
 pub fn parse<T: AsRef<str>>(token: T) -> Result<Token, JWTParsePartError> {
     let mut parts = token.as_ref().split('.');
     let header = parse_header(parts.next()).map_err(JWTParsePartError::Header)?;
-    let body = parse_body(parts.next()).map_err(JWTParsePartError::Body)?;
-    let signature = parse_signature(parts.next()).map_err(JWTParsePartError::Signature)?;
+    if header.get("enc").is_some() {
+        // TODO attempt to decrypt the body using the algorithm specified in the header
+        // and a key provided by argument
+        let _encryption_key =
+            parse_encryption_key(parts.next()).map_err(JWTParsePartError::EncryptionKey)?;
+        let _encryption_iv =
+            parse_encryption_iv(parts.next()).map_err(JWTParsePartError::EncryptionIV)?;
+        let _encrypted_body = parts.next().unwrap();
+        let _authentication_tag =
+            parse_authentication_tag(parts.next()).map_err(JWTParsePartError::AuthenticationTag)?;
 
-    if parts.next().is_some() {
-        return Err(JWTParsePartError::UnexpectedPart());
+        if parts.next().is_some() {
+            return Err(JWTParsePartError::UnexpectedPart());
+        }
+
+        // For now (and eventually if no key is provided),
+        // return a token with the header and a dummy value
+        // for the body
+        Ok(Token::new(
+            header,
+            serde_json::Value::from("encrypted"),
+            Vec::new(),
+        ))
+    } else {
+        let body = parse_body(parts.next()).map_err(JWTParsePartError::Body)?;
+        let signature = parse_signature(parts.next()).map_err(JWTParsePartError::Signature)?;
+
+        if parts.next().is_some() {
+            return Err(JWTParsePartError::UnexpectedPart());
+        }
+
+        Ok(Token::new(header, body, signature))
     }
-
-    Ok(Token::new(header, body, signature))
 }
 
 #[cfg(test)]
