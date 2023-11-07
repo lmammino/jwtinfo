@@ -23,6 +23,8 @@ fn main() -> io::Result<()> {
                 .help("Pretty prints the JWT header or body"),
             Arg::new("token")
                 .index(1)
+                .allow_hyphen_values(true)
+                .required(true)
                 .help("the JWT as a string (use \"-\" to read from stdin)"),
         ])
         .get_matches();
