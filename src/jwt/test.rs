@@ -16,7 +16,7 @@ fn assert_parse_successfully() {
 }
 
 #[test]
-fn assert_parse_successfullt_from_str() {
+fn assert_parse_successfully_from_str() {
     let token = String::from("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmb28iOiJiYXIifQ.dtxWM6MIcgoeMgH87tGvsNDY6cHWL6MGW4LeYvnm1JA");
     let parsed_token = token.parse::<Token>().unwrap();
     assert_eq!(
