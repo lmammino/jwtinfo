@@ -57,6 +57,7 @@ pub struct Token {
     /// the body (or payload) of the token
     pub body: serde_json::Value,
     /// the signature data of the token
+    #[allow(unused)]
     pub signature: Vec<u8>,
 }
 
