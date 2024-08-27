@@ -1,29 +1,27 @@
 {
+  description = "jwtinfo";
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
-    nci.url = "github:yusdacra/nix-cargo-integration";
-    nci.inputs.nixpkgs.follows = "nixpkgs";
-    parts.url = "github:hercules-ci/flake-parts";
-    parts.inputs.nixpkgs-lib.follows = "nixpkgs";
   };
-  outputs = inputs @ { nci, ... }: let
-    crateName = "jwtinfo";
-  in  inputs.parts.lib.mkFlake { inherit inputs; } {
-      systems = ["x86_64-linux"];
-      imports = [
-        nci.flakeModule
-        ({ ... }: {
-          perSystem = { pkgs, ... }: {
-            nci.projects.${crateName}.path = ./;
-            nci.crates.${crateName}.profiles.release.runTests = false;
-          };
-        })
+  outputs = { self, nixpkgs }:
+    let
+      supportedSystems = [
+        "x86_64-linux"
+        "aarch64-linux"
+        "x86_64-darwin"
+        "aarch64-darwin"
+        "x86_64-windows"
+        "aarch64-windows"
       ];
-      perSystem = { pkgs, config, ... }: let
-        crateOutputs = config.nci.outputs."${crateName}";
-      in {
-        devShells.default = crateOutputs.devShell;
-        packages.default = crateOutputs.packages.release;
-      };
+      forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
+      pkgsFor = nixpkgs.legacyPackages;
+    in
+    {
+      packages = forAllSystems (system: {
+        default = pkgsFor.${system}.callPackage ./default.nix { };
+      });
+      devShells = forAllSystems (system: {
+        default = pkgsFor.${system}.callPackage ./shell.nix { };
+      });
     };
 }
