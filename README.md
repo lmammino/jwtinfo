@@ -100,9 +100,11 @@ Or, if you prefer to use a configuration file, you can add the following to your
 flake:
 
 ```nix
-{
-  inputs.jwtinfo.url = "github:lmammino/jwtinfo";
-}
+jwtinfo = {
+    url = "github:lmammino/jwtinfo";
+    inputs.nixpkgs.follows = "nixpkgs"; 
+};
+
 # ... with home.nix
 home.packages = [ inputs.jwtinfo.packages."x86_64-linux".default ];
 
