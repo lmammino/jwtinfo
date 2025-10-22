@@ -192,8 +192,5 @@ fn assert_parse_jwe_with_encrypted_message() {
     );
 
     // Verify the body shows the encrypted message
-    assert_eq!(
-        parsed_token.body.as_str().unwrap(),
-        "<encrypted JWE body>"
-    );
+    assert_eq!(parsed_token.body.as_str().unwrap(), "<encrypted JWE body>");
 }
