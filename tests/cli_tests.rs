@@ -92,10 +92,7 @@ fn test_invalid_jwt_returns_error() {
 #[test]
 fn test_full_flag_structure() {
     let mut cmd = Command::cargo_bin("jwtinfo").unwrap();
-    let output = cmd.arg("--full")
-        .arg(TEST_JWT)
-        .output()
-        .unwrap();
+    let output = cmd.arg("--full").arg(TEST_JWT).output().unwrap();
 
     let stdout = String::from_utf8(output.stdout).unwrap();
 
