@@ -160,7 +160,7 @@ checksum = "dc6f3ad7b9d11a0c00842ff8de1b60ee58661048eb8049ed33c73594f359d7e6"
 
 [[package]]
 name = "jwtinfo"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "assert_cmd",
  "base64",
