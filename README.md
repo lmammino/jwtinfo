@@ -10,12 +10,29 @@
 [![Gitpod Ready-to-Code](https://img.shields.io/badge/Gitpod-Ready--to--Code-blue?logo=gitpod)](https://gitpod.io/#https://github.com/lmammino/jwtinfo)
 
 A command line tool to get information about
-[JWTs](https://tools.ietf.org/html/rfc7519) (Json Web Tokens).
+[JWTs](https://tools.ietf.org/html/rfc7519) (JSON Web Tokens).
+
+## Features
+
+### CLI Tool
+- **Decode JWT tokens** without verification - quickly inspect header and claims
+- **Multiple display modes**: view body only (default), header only (`--header`), or both (`--full`)
+- **Pretty printing** with `--pretty` flag for readable JSON output
+- **Stdin support** - pipe tokens directly or use as command argument
+- **JWE token detection** - gracefully handles encrypted JWT tokens with clear messaging
+- **Composable** - works seamlessly with tools like `jq` for advanced JSON processing
+
+### Rust Library
+- **Simple parsing API** - `jwt::parse()` function for easy token decoding
+- **Type-safe access** - header and body exposed as `serde_json::Value`
+- **FromStr implementation** - parse tokens using `.parse::<jwt::Token>()`
+- **No verification** - focused on inspection and debugging, not validation
+- **JWE support** - detects encrypted tokens and handles them appropriately
 
 ## Usage
 
 `jwtinfo` is a command line interface that allows you to inspect a given JWT.
-The tool currently allows to see the body of the token in JSON format. It
+The tool currently allows you to see the body of the token in JSON format. It
 accepts a single command line argument which should be a valid JWT.
 
 Here's an example:
@@ -93,6 +110,54 @@ jwtinfo eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI
 
 You can install the binary in several ways:
 
+### npm
+
+Install via npm (Node.js package manager):
+
+```bash
+npm install -g jwtinfo
+```
+
+Or use `npx` to run without installing:
+
+```bash
+npx jwtinfo <token>
+```
+
+### Homebrew
+
+Install via [Homebrew](https://brew.sh/) (macOS and Linux):
+
+```bash
+# Add the tap
+brew tap lmammino/tap
+
+# Install jwtinfo
+brew install jwtinfo
+```
+
+Or install directly in one command:
+
+```bash
+brew install lmammino/tap/jwtinfo
+```
+
+### Shell Installer (macOS, Linux, WSL)
+
+Download and install precompiled binaries with a single command:
+
+```bash
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/lmammino/jwtinfo/releases/latest/download/jwtinfo-installer.sh | sh
+```
+
+### PowerShell Installer (Windows)
+
+Download and install precompiled binaries with PowerShell:
+
+```powershell
+irm https://github.com/lmammino/jwtinfo/releases/latest/download/jwtinfo-installer.ps1 | iex
+```
+
 ### Cargo
 
 You can install the binary in your system with
@@ -102,29 +167,9 @@ You can install the binary in your system with
 cargo install jwtinfo
 ```
 
-At this point `jwtinfo` will be available as a binary in your system.
-
-### Install script
-
-The following script will download and install precompiled binaries from the
-latest GitHub release
-
-```bash
-curl https://raw.githubusercontent.com/lmammino/jwtinfo/main/install.sh | sh
-```
-
-By default, it will install the binary in `/usr/local/bin`. You can customize
-this by setting the `INSTALL_DIRECTORY` environment variable before running the
-script (e.g. `INSTALL_DIRECTORY=$HOME` will install the binary in `$HOME/bin`).
-
-If you want to install a specific release you can set the `RELEASE_TAG`
-environment variable to point to your target version before running the script
-(e.g. `RELESE_TAG=v0.1.7`).
-
 ### Precompiled binaries
 
-Pre-compiled binaries for x64 (Windows, macOs and Unix) and ARMv7 are available
-in the [Releases](https://github.com/lmammino/jwtinfo/releases) page.
+Pre-compiled binaries for multiple platforms are available in the [Releases](https://github.com/lmammino/jwtinfo/releases) page.
 
 ### Using Nix
 
@@ -165,7 +210,7 @@ Finally, for development purposes, you can clone this repo and then run:
 nix develop
 ```
 
-#### Alternatives
+### Alternatives
 
 If you don't want to install a binary for debugging JWT, a super simple `bash`
 alternative called
@@ -174,14 +219,14 @@ is available.
 
 ## Programmatic usage
 
-Install with cargo:
+Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
 jwtinfo = "*"
 ```
 
-Then use it in your code
+Then use it in your code:
 
 ```rust
 use jwtinfo::{jwt};
@@ -191,7 +236,7 @@ assert_eq!(token.header.to_string(), "{\"alg\":\"HS256\",\"typ\":\"JWT\"}");
 assert_eq!(token.body.to_string(), "{\"iat\":1516239022,\"name\":\"John Doe\",\"sub\":\"1234567890\"}");
 ```
 
-Since `jwt:Token` implements `str::FromStr`, you can also do the following:
+Since `jwt::Token` implements `str::FromStr`, you can also do the following:
 
 ```rust
 use jwtinfo::{jwt};
@@ -204,7 +249,7 @@ assert_eq!(token.body.to_string(), "{\"iat\":1516239022,\"name\":\"John Doe\",\"
 
 If you want to run coverage reports locally you can follow this recipe.
 
-First of all you will need Rust Nightly that you can get with `rustup`
+First, you will need Rust Nightly that you can get with `rustup`
 
 ```bash
 rustup install nightly
@@ -224,15 +269,15 @@ export RUSTFLAGS="-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-c
 cargo +nightly test
 ```
 
-This will run your tests and generate coverage info in `./target/debug/`
+This will run the tests and generate coverage info in `./target/debug/`
 
-Now we can run `grcov`:
+Now you can run `grcov`:
 
 ```bash
 grcov ./target/debug/ -s . -t html --llvm --branch --ignore-not-existing -o ./target/debug/coverage/
 ```
 
-Finally you will have your browsable coverage report at
+Finally, you will have your browsable coverage report at
 `./target/debug/coverage/index.html`.
 
 ### Tarpaulin coverage
