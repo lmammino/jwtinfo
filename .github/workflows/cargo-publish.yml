@@ -1,0 +1,23 @@
+name: Publish to crates.io
+
+on:
+  workflow_call:
+    inputs:
+      plan:
+        required: true
+        type: string
+
+jobs:
+  cargo-publish:
+    runs-on: ubuntu-latest
+    env:
+      PLAN: ${{ inputs.plan }}
+    steps:
+      - name: Print plan
+        run: |
+          echo "Plan is: ${PLAN}"
+      - uses: actions/checkout@v4
+      - name: Release on Crates.io
+        run: |
+          cargo login ${{ secrets.CARGO_TOKEN }}
+          cargo publish

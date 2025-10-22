@@ -18,6 +18,12 @@ authors = ["Luciano Mammino", "Stefano Abalsamo"]
 edition = "2018"
 license = "MIT"
 
+[package.metadata.wix]
+upgrade-guid = "77B6F50C-1537-4E84-A09B-BB2993285D40"
+path-guid = "1D69368A-6506-4A00-A0A9-2B65A54172F5"
+license = false
+eula = false
+
 [dependencies]
 clap = "4.4.7"
 base64 = "0.21"
