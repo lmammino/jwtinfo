@@ -10,6 +10,7 @@ categories = [
     "development-tools::debugging",
 ]
 repository = "https://github.com/lmammino/jwtinfo"
+homepage = "https://github.com/lmammino/jwtinfo"
 documentation = "https://github.com/lmammino/jwtinfo"
 readme = "README.md"
 version = "0.6.0"
@@ -34,3 +35,8 @@ path = "src/main.rs"
 [[bin]]
 name = "jwtinfo"
 path = "src/cli.rs"
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"
