@@ -1,9 +1,8 @@
 use clap::{Arg, ArgAction, Command};
+use jwtinfo::jwt;
 use serde_json::to_string_pretty;
 use std::io::{self, Read};
 use std::process;
-
-mod jwt;
 
 #[doc(hidden)]
 fn main() -> io::Result<()> {

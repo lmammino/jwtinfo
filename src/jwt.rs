@@ -197,14 +197,28 @@ fn parse_signature(raw_signature: Option<&str>) -> Result<Vec<u8>, JWTParseError
 pub fn parse<T: AsRef<str>>(token: T) -> Result<Token, JWTParsePartError> {
     let mut parts = token.as_ref().split('.');
     let header = parse_header(parts.next()).map_err(JWTParsePartError::Header)?;
-    let body = parse_body(parts.next()).map_err(JWTParsePartError::Body)?;
-    let signature = parse_signature(parts.next()).map_err(JWTParsePartError::Signature)?;
 
-    if parts.next().is_some() {
-        return Err(JWTParsePartError::UnexpectedPart());
+    // Check if this is an encrypted JWE token
+    if header.get("enc").is_some() {
+        // For encrypted tokens (JWE), we cannot read the body without decryption.
+        // Return a token with the header and a placeholder message for the body.
+        // JWE tokens have 5 parts instead of 3, so we skip validation of the remaining parts.
+        Ok(Token::new(
+            header,
+            serde_json::Value::String("<encrypted JWE body>".to_string()),
+            Vec::new(),
+        ))
+    } else {
+        // Standard JWT token with 3 parts: header.body.signature
+        let body = parse_body(parts.next()).map_err(JWTParsePartError::Body)?;
+        let signature = parse_signature(parts.next()).map_err(JWTParsePartError::Signature)?;
+
+        if parts.next().is_some() {
+            return Err(JWTParsePartError::UnexpectedPart());
+        }
+
+        Ok(Token::new(header, body, signature))
     }
-
-    Ok(Token::new(header, body, signature))
 }
 
 #[cfg(test)]
