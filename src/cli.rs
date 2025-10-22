@@ -15,7 +15,14 @@ fn main() -> io::Result<()> {
                 .short('H')
                 .long("header")
                 .action(ArgAction::SetTrue)
+                .conflicts_with("full")
                 .help("Shows the token header rather than the body"),
+            Arg::new("full")
+                .short('F')
+                .long("full")
+                .action(ArgAction::SetTrue)
+                .conflicts_with("header")
+                .help("Shows both the token header and body"),
             Arg::new("pretty")
                 .short('P')
                 .long("pretty")
@@ -48,16 +55,29 @@ fn main() -> io::Result<()> {
         }
     };
 
-    let part = if matches.get_flag("header") {
-        jwt_token.header
+    let stringified = if matches.get_flag("full") {
+        // Show both header and claims
+        let full_output = serde_json::json!({
+            "header": jwt_token.header,
+            "claims": jwt_token.body
+        });
+        if should_pretty_print {
+            to_string_pretty(&full_output)?
+        } else {
+            full_output.to_string()
+        }
     } else {
-        jwt_token.body
-    };
-
-    let stringified = if should_pretty_print {
-        to_string_pretty(&part)?
-    } else {
-        part.to_string()
+        // Show either header or body
+        let part = if matches.get_flag("header") {
+            jwt_token.header
+        } else {
+            jwt_token.body
+        };
+        if should_pretty_print {
+            to_string_pretty(&part)?
+        } else {
+            part.to_string()
+        }
     };
 
     println!("{}", stringified);

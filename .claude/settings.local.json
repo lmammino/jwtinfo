@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(gh run view:*)",
-      "Bash(gh api:*)"
+      "Bash(gh api:*)",
+      "WebFetch(domain:github.com)",
+      "mcp__serena__find_file"
     ],
     "deny": [],
     "ask": []
