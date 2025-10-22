@@ -37,11 +37,6 @@ fn main() -> io::Result<()> {
 
     let should_pretty_print = matches.get_flag("pretty");
 
-    if !matches.get_one::<String>("token").is_some() {
-        eprintln!("Error: No token provided, see --help for usage");
-        process::exit(1);
-    }
-
     let mut token = matches.get_one::<String>("token").unwrap().clone();
     let mut buffer = String::new();
 

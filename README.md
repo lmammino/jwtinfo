@@ -86,6 +86,9 @@ You can combine the tool with other command line utilities, for instance
 jwtinfo eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c | jq .
 ```
 
+> [!NOTE]
+> **Encrypted [JWE](https://datatracker.ietf.org/doc/html/rfc7516) Tokens**: If you provide an encrypted JWE token (JSON Web Encryption), the tool will detect it by checking for the `enc` field in the header. Since JWE tokens are encrypted, the claims/body cannot be read without decryption. In this case, `jwtinfo` will display the special placeholder string `"<encrypted JWE body>"` instead of the actual claims. The header can still be inspected normally using the `--header` flag.
+
 ## Install
 
 You can install the binary in several ways:
