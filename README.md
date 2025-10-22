@@ -43,6 +43,42 @@ Which will print:
 { "alg": "HS256", "typ": "JWT" }
 ```
 
+If you want to see both the header and the claims at the same time, you can use
+the `--full` flag:
+
+```bash
+jwtinfo --full eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+```
+
+Which will print:
+
+```json
+{"header":{"alg":"HS256","typ":"JWT"},"claims":{"sub":"1234567890","name":"John Doe","iat":1516239022}}
+```
+
+For better readability, you can combine `--full` with the `--pretty` flag to
+get formatted output:
+
+```bash
+jwtinfo --full --pretty eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+```
+
+Which will print:
+
+```json
+{
+  "header": {
+    "alg": "HS256",
+    "typ": "JWT"
+  },
+  "claims": {
+    "sub": "1234567890",
+    "name": "John Doe",
+    "iat": 1516239022
+  }
+}
+```
+
 You can combine the tool with other command line utilities, for instance
 [`jq`](https://stedolan.github.io/jq/):
 
