@@ -160,23 +160,12 @@ fn parse_base64_string(s: &str) -> Result<String, JWTParseError> {
 }
 
 #[doc(hidden)]
-fn parse_header(raw_header: Option<&str>) -> Result<serde_json::Value, JWTParseError> {
-    match raw_header {
+fn parse_header_or_body(raw: Option<&str>) -> Result<serde_json::Value, JWTParseError> {
+    match raw {
         None => Err(JWTParseError::MissingSection()),
         Some(s) => {
-            let header_str = parse_base64_string(s)?;
-            Ok(serde_json::from_str(&header_str)?)
-        }
-    }
-}
-
-#[doc(hidden)]
-fn parse_body(raw_body: Option<&str>) -> Result<serde_json::Value, JWTParseError> {
-    match raw_body {
-        None => Err(JWTParseError::MissingSection()),
-        Some(s) => {
-            let body_str = parse_base64_string(s)?;
-            Ok(serde_json::from_str(&body_str)?)
+            let str = parse_base64_string(s)?;
+            Ok(serde_json::from_str(&str)?)
         }
     }
 }
@@ -196,7 +185,7 @@ fn parse_signature(raw_signature: Option<&str>) -> Result<Vec<u8>, JWTParseError
 /// This function will return a `JWTParsePartError` if the token cannot be successfully parsed
 pub fn parse<T: AsRef<str>>(token: T) -> Result<Token, JWTParsePartError> {
     let mut parts = token.as_ref().split('.');
-    let header = parse_header(parts.next()).map_err(JWTParsePartError::Header)?;
+    let header = parse_header_or_body(parts.next()).map_err(JWTParsePartError::Header)?;
 
     // Check if this is an encrypted JWE token
     if header.get("enc").is_some() {
@@ -210,7 +199,7 @@ pub fn parse<T: AsRef<str>>(token: T) -> Result<Token, JWTParsePartError> {
         ))
     } else {
         // Standard JWT token with 3 parts: header.body.signature
-        let body = parse_body(parts.next()).map_err(JWTParsePartError::Body)?;
+        let body = parse_header_or_body(parts.next()).map_err(JWTParsePartError::Body)?;
         let signature = parse_signature(parts.next()).map_err(JWTParsePartError::Signature)?;
 
         if parts.next().is_some() {
