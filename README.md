@@ -19,7 +19,7 @@ A command line tool to get information about
 - **Multiple display modes**: view body only (default), header only (`--header`), or both (`--full`)
 - **Pretty printing** with `--pretty` flag for readable JSON output
 - **Stdin support** - pipe tokens directly or use as command argument
-- **JWE token detection** - gracefully handles encrypted JWT tokens with clear messaging
+- **JWE decryption** - decrypt encrypted JWTs with `--key` (supports `dir`, `RSA-OAEP`, `RSA-OAEP-256` + `A128GCM`/`A256GCM`)
 - **Composable** - works seamlessly with tools like `jq` for advanced JSON processing
 
 ### Rust Library
@@ -103,8 +103,25 @@ You can combine the tool with other command line utilities, for instance
 jwtinfo eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c | jq .
 ```
 
+### JWE decryption
+
+If the token is encrypted (JWE), you can decrypt it by providing a key file:
+
+```bash
+jwtinfo --key /path/to/private.pem "$(cat /path/to/jwe.txt)"
+```
+
+Supported algorithms:
+
+- **Key management (`alg`)**: `dir`, `RSA-OAEP`, `RSA-OAEP-256`
+- **Content encryption (`enc`)**: `A128GCM`, `A256GCM`
+
+For `dir`, the key file must contain the raw content-encryption key (CEK) bytes.
+For RSA-based algorithms, the key file must be a PEM-encoded private key in PKCS#1 or PKCS#8 format.
+At the moment only `.pem` keys are supported; additional formats will be added in the future.
+
 > [!NOTE]
-> **Encrypted [JWE](https://datatracker.ietf.org/doc/html/rfc7516) Tokens**: If you provide an encrypted JWE token (JSON Web Encryption), the tool will detect it by checking for the `enc` field in the header. Since JWE tokens are encrypted, the claims/body cannot be read without decryption. In this case, `jwtinfo` will display the special placeholder string `"<encrypted JWE body>"` instead of the actual claims. The header can still be inspected normally using the `--header` flag.
+> **Encrypted [JWE](https://datatracker.ietf.org/doc/html/rfc7516) Tokens**: If you provide an encrypted JWE token without a key, `jwtinfo` will show a placeholder message indicating that a private key is required. Use `-K/--key` to decrypt it. The header can still be inspected normally using the `--header` flag.
 
 ## Install
 

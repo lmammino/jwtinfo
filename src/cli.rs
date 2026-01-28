@@ -1,11 +1,19 @@
+pub mod jw_error;
+pub mod jw_parser;
+pub mod jwe;
+pub mod jwt;
+
+use crate::jwe::handle_jwe;
+use crate::jwt::stringify_token;
 use clap::{Arg, ArgAction, Command};
-use jwtinfo::jwt;
-use serde_json::to_string_pretty;
-use std::io::{self, Read};
-use std::process;
+use std::{
+    error::Error,
+    fs,
+    io::{self, Read},
+};
 
 #[doc(hidden)]
-fn main() -> io::Result<()> {
+fn main() -> Result<(), Box<dyn Error>> {
     let matches = Command::new("jwtinfo")
         .version(env!("CARGO_PKG_VERSION"))
         .about("Shows information about a JWT (Json Web Token)")
@@ -31,12 +39,17 @@ fn main() -> io::Result<()> {
                 .index(1)
                 .allow_hyphen_values(true)
                 .required(true)
-                .help("the JWT as a string (use \"-\" to read from stdin)"),
+                .help("the JWT/JWE as a string (use \"-\" to read from stdin)"),
+            Arg::new("key")
+                .short('K')
+                .long("key")
+                .help("the path to the private key for the cek decryption in case of JWE"),
         ])
         .get_matches();
 
+    let full_flag = matches.get_flag("full");
     let should_pretty_print = matches.get_flag("pretty");
-
+    let header_flag = matches.get_flag("header");
     let mut token = matches.get_one::<String>("token").unwrap().clone();
     let mut buffer = String::new();
 
@@ -46,40 +59,19 @@ fn main() -> io::Result<()> {
         token = (*buffer.trim()).to_string();
     }
 
-    let jwt_token = match jwt::parse(token) {
-        Ok(t) => t,
-        Err(e) => {
-            eprintln!("Error: {}", e);
-            process::exit(1);
-        }
-    };
+    // if there is a key must be a JWE
+    if let Some(key_path) = matches.get_one::<String>("key") {
+        let key = fs::read(key_path)?;
+        token = handle_jwe(token, key)?;
+    }
 
-    let stringified = if matches.get_flag("full") {
-        // Show both header and claims
-        let full_output = serde_json::json!({
-            "header": jwt_token.header,
-            "claims": jwt_token.body
-        });
-        if should_pretty_print {
-            to_string_pretty(&full_output)?
-        } else {
-            full_output.to_string()
+    match jwt::parse(token.clone()) {
+        Ok(jwt_token) => {
+            let stringified =
+                stringify_token(jwt_token, full_flag, should_pretty_print, header_flag)?;
+            println!("{}", stringified);
         }
-    } else {
-        // Show either header or body
-        let part = if matches.get_flag("header") {
-            jwt_token.header
-        } else {
-            jwt_token.body
-        };
-        if should_pretty_print {
-            to_string_pretty(&part)?
-        } else {
-            part.to_string()
-        }
-    };
-
-    println!("{}", stringified);
-
+        Err(_) => println!("{}", token),
+    }
     Ok(())
 }

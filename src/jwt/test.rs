@@ -119,7 +119,7 @@ fn assert_fails_with_non_base64_header() {
     let err = format!("{}", parsed_token.unwrap_err());
     assert_eq!(
         err,
-        "Invalid Header: Base64 error, Invalid byte 196, offset 0."
+        "Invalid Header: Base64 error, Invalid symbol 196, offset 0."
     );
 }
 
@@ -132,7 +132,7 @@ fn assert_fails_with_non_base64_body() {
     let err = format!("{}", parsed_token.unwrap_err());
     assert_eq!(
         err,
-        "Invalid Body: Base64 error, Invalid byte 196, offset 0."
+        "Invalid Body: Base64 error, Invalid symbol 196, offset 0."
     );
 }
 
@@ -145,7 +145,7 @@ fn assert_fails_with_non_base64_signature() {
     let err = format!("{}", parsed_token.unwrap_err());
     assert_eq!(
         err,
-        "Invalid Signature: Base64 error, Invalid byte 196, offset 0."
+        "Invalid Signature: Base64 error, Invalid symbol 196, offset 0."
     );
 }
 
@@ -156,7 +156,7 @@ fn assert_fails_with_non_valid_token() {
     let err = format!("{}", parsed_token.unwrap_err());
     assert_eq!(
         err,
-        "Invalid Header: Base64 error, Encoded text cannot have a 6-bit remainder."
+        "Invalid Header: Base64 error, Invalid symbol 39, offset 1."
     );
 }
 
@@ -169,7 +169,7 @@ fn assert_fails_with_token_from_invalid_lossy_utf8() {
     let err = format!("{}", parsed_token.unwrap_err());
     assert_eq!(
         err,
-        "Invalid Header: Base64 error, Invalid byte 0, offset 0."
+        "Invalid Header: Base64 error, Invalid symbol 0, offset 0."
     );
 }
 
@@ -192,5 +192,8 @@ fn assert_parse_jwe_with_encrypted_message() {
     );
 
     // Verify the body shows the encrypted message
-    assert_eq!(parsed_token.body.as_str().unwrap(), "<encrypted JWE body>");
+    assert_eq!(
+        parsed_token.body.as_str().unwrap(),
+        "Detected a JWE token but no private key was provided. Please use the -K/--key flag to decrypt it."
+    );
 }
