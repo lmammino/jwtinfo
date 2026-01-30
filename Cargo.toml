@@ -33,6 +33,7 @@ rsa = "0.9.9"
 sha2 = "0.10.9"
 aes-gcm = "0.10.3"
 sha1 = "0.10.6"
+thiserror = "2.0"
 
 [dev-dependencies]
 assert_cmd = "2.0"
