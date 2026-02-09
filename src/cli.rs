@@ -62,9 +62,13 @@ fn main() -> Result<(), Box<dyn Error>> {
     // if there is a key must be a JWE
     if let Some(key_path) = matches.get_one::<String>("key") {
         let key = fs::read(key_path)?;
+        // handle_jwe returns the JWE payload, which could be a UTF-8 string or a
+        // JWT to decode (currently we don't handle payload as byte arrays)
         token = handle_jwe(token, key)?;
     }
 
+    // if the token is a JWT, jwt::parse will handle it correctly, otherwise
+    // the raw string will be printed
     match jwt::parse(token.clone()) {
         Ok(jwt_token) => {
             let stringified =
