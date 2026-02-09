@@ -105,7 +105,7 @@ jwtinfo eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI
 
 ### JWE decryption
 
-If the token is encrypted (JWE), you can decrypt it by providing a key file:
+If the token is encrypted (JWE), and you own the decryption key, you can see the decrypted payload by providing the key file:
 
 ```bash
 jwtinfo --key /path/to/private.pem "$(cat /path/to/jwe.txt)"
