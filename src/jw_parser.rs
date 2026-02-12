@@ -26,7 +26,7 @@ fn parse_base64_string(string_to_parse: &str) -> Result<String, ParseError> {
 
 pub fn split_jwe(token: &str) -> Result<[&str; 5], JweParseError> {
     token
-        .split(".")
+        .split('.')
         .collect::<Vec<&str>>()
         .try_into()
         .map_err(|vec: Vec<&str>| {

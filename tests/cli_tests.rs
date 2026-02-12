@@ -2,7 +2,7 @@ use assert_cmd::Command;
 use predicates::prelude::*;
 
 const TEST_JWT: &str = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmb28iOiJiYXIifQ.dtxWM6MIcgoeMgH87tGvsNDY6cHWL6MGW4LeYvnm1JA";
-const TEST_JWE: &str = include_str!("../src/jwe/examples/example_token.txt");
+const TEST_JWE: &str = include_str!("../src/jwe/examples/simple_token.txt");
 const TEST_JWE_DECRYPTED: &str = "Questo e' un messaggio super segreto!";
 
 #[test]
@@ -165,7 +165,10 @@ fn test_jwe_pretty_flag() {
 #[test]
 fn test_jwe_with_key_decrypts_payload() {
     let mut cmd = Command::cargo_bin("jwtinfo").unwrap();
-    let key_path = format!("{}/src/jwe/examples/example_priv.pem", env!("CARGO_MANIFEST_DIR"));
+    let key_path = format!(
+        "{}/src/jwe/examples/priv_simple_token.pem",
+        env!("CARGO_MANIFEST_DIR")
+    );
     cmd.arg("--key")
         .arg(key_path)
         .arg(TEST_JWE.trim())

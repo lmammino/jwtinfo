@@ -69,7 +69,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // if the token is a JWT, jwt::parse will handle it correctly, otherwise
     // the raw string will be printed
-    match jwt::parse(token.clone()) {
+    match jwt::parse(&token) {
         Ok(jwt_token) => {
             let stringified =
                 stringify_token(jwt_token, full_flag, should_pretty_print, header_flag)?;

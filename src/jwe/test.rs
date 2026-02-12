@@ -2,8 +2,8 @@ use crate::jw_parser::parse_jwe;
 use crate::jwe::handle_jwe;
 use crate::jwe::jwe_handler::JweHeader;
 
-const EXAMPLE_JWE: &str = include_str!("examples/example_token.txt");
-const EXAMPLE_JWE_KEY: &[u8] = include_bytes!("examples/example_priv.pem");
+const EXAMPLE_JWE: &str = include_str!("examples/simple_token.txt");
+const EXAMPLE_JWE_KEY: &[u8] = include_bytes!("examples/priv_simple_token.pem");
 
 #[test]
 fn assert_parse_jwe_header_fields() {
