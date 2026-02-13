@@ -3,7 +3,7 @@ use predicates::prelude::*;
 
 const TEST_JWT: &str = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmb28iOiJiYXIifQ.dtxWM6MIcgoeMgH87tGvsNDY6cHWL6MGW4LeYvnm1JA";
 const TEST_JWE: &str = include_str!("../src/jwe/tests/fixtures/simple_token.txt");
-const TEST_JWE_DECRYPTED: &str = "Questo e' un messaggio super segreto!";
+const TEST_JWE_DECRYPTED: &str = "This is a super secret message!";
 
 #[test]
 fn test_default_shows_body() {
