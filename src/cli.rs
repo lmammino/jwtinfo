@@ -1,11 +1,8 @@
-pub mod jw_error;
-pub mod jw_parser;
-pub mod jwe;
-pub mod jwt;
+use jwtinfo::jwt;
 
-use crate::jwe::handle_jwe;
-use crate::jwt::stringify_token;
 use clap::{Arg, ArgAction, Command};
+use jwtinfo::jwe::handle_jwe;
+use jwtinfo::jwt::stringify_token;
 use std::{
     error::Error,
     fs,
