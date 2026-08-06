@@ -1,4 +1,4 @@
-use jwtinfo::{jw_error::JWTParsePartError, jwt};
+use jwtinfo::jwt;
 
 use clap::{Arg, ArgAction, Command};
 use jwtinfo::jwe::handle_jwe;
@@ -48,6 +48,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let should_pretty_print = matches.get_flag("pretty");
     let header_flag = matches.get_flag("header");
     let mut token = matches.remove_one::<String>("token").unwrap();
+    let mut is_jwt_body = false;
     let mut buffer = String::new();
 
     // if the token is "-" read it from stdin
@@ -61,7 +62,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         let key = fs::read(key_path)?;
         // handle_jwe returns the JWE payload, which could be a UTF-8 string or a
         // JWT to decode (currently we don't handle payload as byte arrays)
-        token = handle_jwe(token, key)?;
+        (token, is_jwt_body) = handle_jwe(token, key)?;
     }
 
     match jwt::parse(&token) {
@@ -72,8 +73,13 @@ fn main() -> Result<(), Box<dyn Error>> {
             Ok(())
         }
         Err(e) => {
-            eprintln!("Error with token: {}\nDetail: {}", token, e);
-            Err(e.into())
+            if !is_jwt_body {
+                println!("{}", token);
+                Ok(())
+            } else {
+                eprintln!("Error with token: {}\nDetail: {}", token, e);
+                Err(e.into())
+            }
         }
     }
 }

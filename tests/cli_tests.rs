@@ -171,7 +171,7 @@ fn test_jwe_with_key_decrypts_payload() {
     );
     cmd.arg("--key")
         .arg(key_path)
-        .arg(TEST_JWE.trim())
+        .arg(TEST_JWE)
         .assert()
         .success()
         .stdout(predicate::str::contains(TEST_JWE_DECRYPTED));
