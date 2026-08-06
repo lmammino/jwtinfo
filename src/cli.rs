@@ -1,4 +1,4 @@
-use jwtinfo::jwt;
+use jwtinfo::{jw_error::JWTParsePartError, jwt};
 
 use clap::{Arg, ArgAction, Command};
 use jwtinfo::jwe::handle_jwe;
@@ -11,7 +11,7 @@ use std::{
 
 #[doc(hidden)]
 fn main() -> Result<(), Box<dyn Error>> {
-    let matches = Command::new("jwtinfo")
+    let mut matches = Command::new("jwtinfo")
         .version(env!("CARGO_PKG_VERSION"))
         .about("Shows information about a JWT (Json Web Token)")
         .args([
@@ -47,13 +47,13 @@ fn main() -> Result<(), Box<dyn Error>> {
     let full_flag = matches.get_flag("full");
     let should_pretty_print = matches.get_flag("pretty");
     let header_flag = matches.get_flag("header");
-    let mut token = matches.get_one::<String>("token").unwrap().clone();
+    let mut token = matches.remove_one::<String>("token").unwrap();
     let mut buffer = String::new();
 
     // if the token is "-" read it from stdin
     if token == "-" {
         io::stdin().read_to_string(&mut buffer)?;
-        token = (*buffer.trim()).to_string();
+        token = (buffer.trim()).to_string();
     }
 
     // if there is a key must be a JWE
@@ -64,15 +64,16 @@ fn main() -> Result<(), Box<dyn Error>> {
         token = handle_jwe(token, key)?;
     }
 
-    // if the token is a JWT, jwt::parse will handle it correctly, otherwise
-    // the raw string will be printed
     match jwt::parse(&token) {
         Ok(jwt_token) => {
             let stringified =
                 stringify_token(jwt_token, full_flag, should_pretty_print, header_flag)?;
             println!("{}", stringified);
+            Ok(())
         }
-        Err(_) => println!("{}", token),
+        Err(e) => {
+            eprintln!("Error with token: {}\nDetail: {}", token, e);
+            Err(e.into())
+        }
     }
-    Ok(())
 }
