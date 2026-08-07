@@ -15,7 +15,7 @@ documentation = "https://github.com/lmammino/jwtinfo"
 readme = "README.md"
 version = "0.7.0"
 authors = ["Luciano Mammino", "Stefano Abalsamo"]
-edition = "2018"
+edition = "2021"
 license = "MIT"
 
 [package.metadata.wix]

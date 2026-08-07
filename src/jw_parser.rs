@@ -3,7 +3,7 @@ use base64::{
     engine::{self, general_purpose},
     Engine as _,
 };
-use std::{convert::TryInto, sync::OnceLock};
+use std::sync::OnceLock;
 
 use crate::jw_error::JweParseError;
 use crate::jw_error::ParseError;
