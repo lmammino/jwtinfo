@@ -5,12 +5,15 @@ use aes_gcm::{
 use rsa::{pkcs1::DecodeRsaPrivateKey, pkcs8::DecodePrivateKey, Oaep, RsaPrivateKey};
 use sha1::Sha1;
 use sha2::Sha256;
-use std::{convert::TryInto, error::Error};
 
-pub type CryptoResult<T> = Result<T, Box<dyn Error + Send + Sync>>;
+use crate::jw_error::JweCryptoError;
 
 pub trait KeyDecryptor {
-    fn decrypt_cek(&self, input_key: &[u8], encrypted_key: &[u8]) -> CryptoResult<Vec<u8>>;
+    fn decrypt_cek(
+        &self,
+        input_key: &[u8],
+        encrypted_key: &[u8],
+    ) -> Result<Vec<u8>, JweCryptoError>;
 }
 
 pub trait ContentDecryptor {
@@ -21,7 +24,7 @@ pub trait ContentDecryptor {
         iv: &[u8],
         ciphertext: &[u8],
         tag: &[u8],
-    ) -> CryptoResult<Vec<u8>>;
+    ) -> Result<Vec<u8>, JweCryptoError>;
 }
 
 pub struct AesGcmContentDecryptor {
@@ -42,50 +45,54 @@ impl ContentDecryptor for AesGcmContentDecryptor {
         iv: &[u8],
         ciphertext: &[u8],
         tag: &[u8],
-    ) -> CryptoResult<Vec<u8>> {
-        if cek.len() != self.key_len {
-            return Err("Cek length mismatch".into());
-        }
-
+    ) -> Result<Vec<u8>, JweCryptoError> {
         let payload_concat = [ciphertext, tag].concat();
         let payload = Payload {
             msg: &payload_concat,
             aad,
         };
 
-        let iv_array: [u8; 12] = iv
-            .try_into()
-            .map_err(|_| "IV length invalid: must be 12 bytes")?;
+        let iv_array: [u8; 12] = iv.try_into().map_err(|_| JweCryptoError::InvalidIvLength)?;
 
         let nonce = Nonce::from(iv_array);
 
         match self.key_len {
             16 => {
-                let key_array: [u8; 16] = cek
-                    .try_into()
-                    .map_err(|_| "CEK length mismatch: expected 16 bytes (A128GCM)")?;
+                let key_array: [u8; 16] =
+                    cek.try_into()
+                        .map_err(|_| JweCryptoError::CekLengthMismatch {
+                            expected: self.key_len,
+                            actual: cek.len(),
+                        })?;
                 let key = Key::<Aes128Gcm>::from(key_array);
                 Aes128Gcm::new(&key).decrypt(&nonce, payload)
             }
             32 => {
-                let key_array: [u8; 32] = cek
-                    .try_into()
-                    .map_err(|_| "CEK length mismatch: expected 32 bytes (A256GCM)")?;
+                let key_array: [u8; 32] =
+                    cek.try_into()
+                        .map_err(|_| JweCryptoError::CekLengthMismatch {
+                            expected: self.key_len,
+                            actual: cek.len(),
+                        })?;
                 let key = Key::<Aes256Gcm>::from(key_array);
                 Aes256Gcm::new(&key).decrypt(&nonce, payload)
             }
-            _ => return Err(format!("Unsupported key length: {}", self.key_len).into()),
+            _ => return Err(JweCryptoError::UnsupportedKeyLength(self.key_len)),
         }
-        .map_err(|e| format!("Decryption failed: {}", e).into())
+        .map_err(|e| JweCryptoError::DecryptionFailed(e.to_string()))
     }
 }
 
 pub struct DirectKeyDecryptor;
 
 impl KeyDecryptor for DirectKeyDecryptor {
-    fn decrypt_cek(&self, input_key: &[u8], encrypted_key: &[u8]) -> CryptoResult<Vec<u8>> {
+    fn decrypt_cek(
+        &self,
+        input_key: &[u8],
+        encrypted_key: &[u8],
+    ) -> Result<Vec<u8>, JweCryptoError> {
         if !encrypted_key.is_empty() {
-            return Err("With 'dir' algorithm, encrypted_key must be empty".into());
+            return Err(JweCryptoError::InvalidRsaKey("".to_string()));
         }
         Ok(input_key.to_vec())
     }
@@ -104,41 +111,49 @@ impl RsaKeyDecryptor {
 }
 
 impl KeyDecryptor for RsaKeyDecryptor {
-    fn decrypt_cek(&self, input_key: &[u8], encrypted_key: &[u8]) -> CryptoResult<Vec<u8>> {
+    fn decrypt_cek(
+        &self,
+        input_key: &[u8],
+        encrypted_key: &[u8],
+    ) -> Result<Vec<u8>, JweCryptoError> {
         let key_str = std::str::from_utf8(input_key)
-            .map_err(|_| "The RSA key received is not a valid UTF-8")?;
+            .map_err(|e| JweCryptoError::InvalidRsaKey(e.to_string()))?;
         let private_key = RsaPrivateKey::from_pkcs1_pem(key_str)
             .or_else(|_| RsaPrivateKey::from_pkcs8_pem(key_str))
-            .map_err(|e| format!("Error while loading RSA key: {}", e))?;
+            .map_err(|e| JweCryptoError::InvalidRsaKey(e.to_string()))?;
 
         let padding = match self.alg_name.as_str() {
             "RSA-OAEP" => Oaep::new::<Sha1>(),
             "RSA-OAEP-256" => Oaep::new::<Sha256>(),
-            _ => return Err(format!("Algorithm not supported: {}", self.alg_name).into()),
+            _ => {
+                return Err(JweCryptoError::UnsupportedAlgorithm(
+                    self.alg_name.to_string(),
+                ))
+            }
         };
 
         private_key
             .decrypt(padding, encrypted_key)
-            .map_err(|e| format!("Failed RSA decrypt: {}", e).into())
+            .map_err(|e| JweCryptoError::DecryptionFailed(e.to_string()))
     }
 }
 
 pub struct AlgorithmFactory;
 
 impl AlgorithmFactory {
-    pub fn get_key_decryptor(alg: &str) -> Result<Box<dyn KeyDecryptor>, String> {
+    pub fn get_key_decryptor(alg: &str) -> Result<Box<dyn KeyDecryptor>, JweCryptoError> {
         match alg {
             "dir" => Ok(Box::new(DirectKeyDecryptor)),
             "RSA-OAEP" | "RSA-OAEP-256" => Ok(Box::new(RsaKeyDecryptor::new(alg))),
-            _ => Err(format!("Unsupported alg: {}", alg)),
+            _ => Err(JweCryptoError::UnsupportedAlgorithm(alg.to_string())),
         }
     }
 
-    pub fn get_content_decryptor(enc: &str) -> Result<Box<dyn ContentDecryptor>, String> {
+    pub fn get_content_decryptor(enc: &str) -> Result<Box<dyn ContentDecryptor>, JweCryptoError> {
         match enc {
             "A128GCM" => Ok(Box::new(AesGcmContentDecryptor::new(16))),
             "A256GCM" => Ok(Box::new(AesGcmContentDecryptor::new(32))),
-            _ => Err(format!("Unsupported enc: {}", enc)),
+            _ => Err(JweCryptoError::UnsupportedAlgorithm(enc.to_string())),
         }
     }
 }

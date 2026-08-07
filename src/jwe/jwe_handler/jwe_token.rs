@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 
-use crate::jwe::jwe_handler::algorithms::{ContentDecryptor, CryptoResult};
+use crate::{jw_error::JweCryptoError, jwe::jwe_handler::algorithms::ContentDecryptor};
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct JweHeader {
@@ -47,7 +47,7 @@ impl JweToken {
         &self,
         decryptor: &dyn ContentDecryptor,
         cek: &[u8],
-    ) -> CryptoResult<Vec<u8>> {
+    ) -> Result<Vec<u8>, JweCryptoError> {
         decryptor.decrypt_payload(cek, &self.aad, &self.iv, &self.ciphertext, &self.tag)
     }
 }

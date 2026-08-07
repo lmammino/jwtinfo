@@ -31,9 +31,9 @@ pub fn split_jwe(token: &str) -> Result<[&str; 5], JweParseError> {
         .try_into()
         .map_err(|vec: Vec<&str>| {
             if vec.len() < 5 {
-                JweParseError::MissingParts()
+                JweParseError::MissingParts
             } else {
-                JweParseError::TooManyParts()
+                JweParseError::TooManyParts
             }
         })
 }

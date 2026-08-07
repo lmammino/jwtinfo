@@ -16,7 +16,7 @@
 //!     assert_eq!(token.header.to_string(), "{\"alg\":\"HS256\",\"typ\":\"JWT\"}");
 //!     assert_eq!(token.body.to_string(), "{\"iat\":1516239022,\"name\":\"John Doe\",\"sub\":\"1234567890\"}");
 //!   }
-//!   Err(e) => panic!(e)
+//!   Err(e) => panic!("{}", e)
 //! }
 //! ```
 //!
@@ -79,7 +79,7 @@ fn parse_base64_string(s: &str) -> Result<String, ParseError> {
 #[doc(hidden)]
 fn parse_header_or_body(raw: Option<&str>) -> Result<serde_json::Value, JWTParseError> {
     match raw {
-        None => Err(JWTParseError::MissingSection()),
+        None => Err(JWTParseError::MissingSection),
         Some(s) => {
             let str = parse_base64_string(s)?;
             Ok(serde_json::from_str(&str)?)
@@ -90,7 +90,7 @@ fn parse_header_or_body(raw: Option<&str>) -> Result<serde_json::Value, JWTParse
 #[doc(hidden)]
 fn parse_signature(raw_signature: Option<&str>) -> Result<Vec<u8>, JWTParseError> {
     match raw_signature {
-        None => Err(JWTParseError::MissingSection()),
+        None => Err(JWTParseError::MissingSection),
         Some(s) => Ok(get_base64().decode(s)?),
     }
 }

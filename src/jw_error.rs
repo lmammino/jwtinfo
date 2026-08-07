@@ -1,4 +1,4 @@
-use std::{error::Error, str, string};
+use std::{str, string};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -18,7 +18,7 @@ pub enum ParseError {
 pub enum JWTParseError {
     /// Indicates that an expected section (Header, Body or Signature) was not found
     #[error("Missing token section")]
-    MissingSection(),
+    MissingSection,
     #[error("{0}")]
     InvalidFormat(#[from] ParseError),
     /// Indicates that a given section did not contain a valid JSON string
@@ -52,9 +52,9 @@ pub enum JWTParsePartError {
 #[derive(Debug, Error)]
 pub enum JweParseError {
     #[error("Missing JWE section")]
-    MissingParts(),
+    MissingParts,
     #[error("Unexpected section")]
-    TooManyParts(),
+    TooManyParts,
     #[error("{0}")]
     InvalidFormat(#[from] ParseError),
 }
@@ -69,30 +69,32 @@ impl From<base64::DecodeError> for JweParseError {
 pub enum JweError {
     #[error("{0}")]
     ParseError(#[from] JweParseError),
-    #[error("{0}")]
-    StringError(String),
-    #[error("{0}")]
-    Internal(Box<dyn Error + Send + Sync + 'static>),
     #[error("not serialized error")]
     JsonError(#[from] serde_json::Error),
     #[error("Invalid UTF-8 string: {0}")]
     InvalidUtf8Error(#[from] string::FromUtf8Error),
-}
-
-impl From<String> for JweError {
-    fn from(e: String) -> Self {
-        JweError::StringError(e)
-    }
-}
-
-impl From<Box<dyn Error + Send + Sync + 'static>> for JweError {
-    fn from(e: Box<dyn Error + Send + Sync + 'static>) -> Self {
-        JweError::Internal(e)
-    }
+    #[error("{0}")]
+    Crypto(#[from] JweCryptoError),
 }
 
 impl From<ParseError> for JweError {
     fn from(e: ParseError) -> Self {
         JweError::ParseError(JweParseError::InvalidFormat(e))
     }
+}
+
+#[derive(Debug, Error)]
+pub enum JweCryptoError {
+    #[error("CEK length mismatch: expected {expected} bytes, got {actual}")]
+    CekLengthMismatch { expected: usize, actual: usize },
+    #[error("IV length invalid: expected 12 bytes")]
+    InvalidIvLength,
+    #[error("Unsupported key length: {0}")]
+    UnsupportedKeyLength(usize),
+    #[error("Decryption failed: {0}")]
+    DecryptionFailed(String),
+    #[error("Invalid RSA key: {0}")]
+    InvalidRsaKey(String),
+    #[error("Unsupported algorithm: {0}")]
+    UnsupportedAlgorithm(String),
 }
