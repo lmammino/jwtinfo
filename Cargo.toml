@@ -34,6 +34,7 @@ sha2 = "0.10"
 aes-gcm = "0.11"
 sha1 = "0.10"
 thiserror = "2.0"
+winnow = "1.0.4"
 
 [dev-dependencies]
 assert_cmd = "2.0"
