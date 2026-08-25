@@ -18,7 +18,7 @@ fn assert_parse_successfully() {
 #[test]
 fn assert_parse_successfully_from_str() {
     let token = String::from("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmb28iOiJiYXIifQ.dtxWM6MIcgoeMgH87tGvsNDY6cHWL6MGW4LeYvnm1JA");
-    let parsed_token = token.parse::<Token>().unwrap();
+    let parsed_token = token.parse::<JwsToken>().unwrap();
     assert_eq!(
         String::from("{\"alg\":\"HS256\",\"typ\":\"JWT\"}"),
         parsed_token.header.to_string()

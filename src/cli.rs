@@ -1,8 +1,8 @@
-use jwtinfo::jwt;
+use jwtinfo::jws;
 
 use clap::{Arg, ArgAction, Command};
 use jwtinfo::jwe::handle_jwe;
-use jwtinfo::jwt::stringify_token;
+use jwtinfo::jws::stringify_token;
 use std::{
     error::Error,
     fs,
@@ -13,7 +13,7 @@ use std::{
 fn main() -> Result<(), Box<dyn Error>> {
     let mut matches = Command::new("jwtinfo")
         .version(env!("CARGO_PKG_VERSION"))
-        .about("Shows information about a JWT (Json Web Token)")
+        .about("Shows information about a JWT (Json Web JwsToken)")
         .args([
             Arg::new("header")
                 .short('H')
@@ -65,7 +65,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         (token, is_jwt_body) = handle_jwe(token, key)?;
     }
 
-    match jwt::parse(&token) {
+    match jws::parse(&token) {
         Ok(jwt_token) => {
             let stringified =
                 stringify_token(jwt_token, full_flag, should_pretty_print, header_flag)?;

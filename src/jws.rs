@@ -7,10 +7,10 @@
 //! To parse a given JWT as a string:
 //!
 //! ```rust
-//! use jwtinfo::{jwt};
+//! use jwtinfo::{jws};
 //!
 //! let token_str = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
-//! match jwt::parse(token_str) {
+//! match jws::parse(token_str) {
 //!   Ok(token) => {
 //!     // do something with token
 //!     assert_eq!(token.header.to_string(), "{\"alg\":\"HS256\",\"typ\":\"JWT\"}");
@@ -20,12 +20,12 @@
 //! }
 //! ```
 //!
-//! Since `jwt::Token` implements `str::FromStr`, you can also do the following:
+//! Since `jws::JwsToken` implements `str::FromStr`, you can also do the following:
 //!
 //! ```rust
-//! use jwtinfo::{jwt};
+//! use jwtinfo::{jws};
 //!
-//! let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c".parse::<jwt::Token>().unwrap();
+//! let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c".parse::<jws::JwsToken>().unwrap();
 //! assert_eq!(token.header.to_string(), "{\"alg\":\"HS256\",\"typ\":\"JWT\"}");
 //! assert_eq!(token.body.to_string(), "{\"iat\":1516239022,\"name\":\"John Doe\",\"sub\":\"1234567890\"}");
 //! ```
@@ -40,7 +40,7 @@ use crate::jw_parser::get_base64;
 
 /// Represents a JWT, composed by a header, a body and a signature
 #[derive(Debug)]
-pub struct Token {
+pub struct JwsToken {
     /// the header part of the token
     pub header: serde_json::Value,
     /// the body (or payload) of the token
@@ -50,7 +50,7 @@ pub struct Token {
     pub signature: Vec<u8>,
 }
 
-impl Token {
+impl JwsToken {
     /// Creates a new token from scratch
     fn new(header: serde_json::Value, body: serde_json::Value, signature: Vec<u8>) -> Self {
         Self {
@@ -61,7 +61,7 @@ impl Token {
     }
 }
 
-impl str::FromStr for Token {
+impl str::FromStr for JwsToken {
     type Err = JWTParsePartError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -100,14 +100,14 @@ fn parse_signature(raw_signature: Option<&str>) -> Result<Vec<u8>, JWTParseError
 /// # Errors
 ///
 /// This function will return a `JWTParsePartError` if the token cannot be successfully parsed
-pub fn parse<T: AsRef<str>>(token: T) -> Result<Token, JWTParsePartError> {
+pub fn parse<T: AsRef<str>>(token: T) -> Result<JwsToken, JWTParsePartError> {
     let mut parts = token.as_ref().split('.');
     let header = parse_header_or_body(parts.next()).map_err(JWTParsePartError::Header)?; // Check if this is an encrypted JWE token
     if header.get("enc").is_some() {
         // For encrypted tokens (JWE), we cannot read the body without decryption.
         // Return a token with the header and a placeholder message for the body.
         // JWE tokens have 5 parts instead of 3, so we skip validation of the remaining parts.
-        Ok(Token::new(
+        Ok(JwsToken::new(
             header,
             serde_json::Value::String(
                 "Detected a JWE token but no private key was provided. Please use the -K/--key flag to decrypt it.".to_string(),
@@ -123,12 +123,12 @@ pub fn parse<T: AsRef<str>>(token: T) -> Result<Token, JWTParsePartError> {
             return Err(JWTParsePartError::UnexpectedPart());
         }
 
-        Ok(Token::new(header, body, signature))
+        Ok(JwsToken::new(header, body, signature))
     }
 }
 
 pub fn stringify_token(
-    jwt_token: Token,
+    jwt_token: JwsToken,
     full_flag: bool,
     should_pretty_print: bool,
     header_flag: bool,
