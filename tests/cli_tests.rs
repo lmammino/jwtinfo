@@ -222,3 +222,77 @@ fn test_nested_jwe_full_flag_shows_complete_structure() {
         .stdout(predicate::str::contains(r#""claims":"#))
         .stdout(predicate::str::contains(r#""iss":"mittente""#));
 }
+
+// Flag handling on decrypted JWE with a plaintext (non-JWT) payload.
+#[test]
+fn test_jwe_with_key_header_flag_shows_jwe_header() {
+    let mut cmd = cargo_bin_cmd!("jwtinfo");
+    let key_path = format!(
+        "{}/src/jwe/tests/fixtures/priv_simple_token.pem",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    cmd.arg("--header")
+        .arg("--key")
+        .arg(key_path)
+        .arg(TEST_JWE)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(r#""enc":"A256GCM""#))
+        .stdout(predicate::str::contains(r#""alg":"RSA-OAEP-256""#))
+        .stdout(predicate::str::contains(r#""typ":"JWE""#));
+}
+
+#[test]
+fn test_jwe_with_key_full_shows_header_and_payload() {
+    let mut cmd = cargo_bin_cmd!("jwtinfo");
+    let key_path = format!(
+        "{}/src/jwe/tests/fixtures/priv_simple_token.pem",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    cmd.arg("--full")
+        .arg("--key")
+        .arg(key_path)
+        .arg(TEST_JWE)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(r#""header":"#))
+        .stdout(predicate::str::contains(r#""payload":"#))
+        .stdout(predicate::str::contains(TEST_JWE_DECRYPTED));
+}
+
+#[test]
+fn test_jwe_with_key_pretty_header_flag() {
+    let mut cmd = cargo_bin_cmd!("jwtinfo");
+    let key_path = format!(
+        "{}/src/jwe/tests/fixtures/priv_simple_token.pem",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    cmd.arg("--pretty")
+        .arg("--header")
+        .arg("--key")
+        .arg(key_path)
+        .arg(TEST_JWE)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(r#""alg": "RSA-OAEP-256""#))
+        .stdout(predicate::str::contains(r#""enc": "A256GCM""#));
+}
+
+// A JWS token passed with --key must warn on stderr but still succeed.
+#[test]
+fn test_jws_with_key_warns_and_still_works() {
+    let mut cmd = cargo_bin_cmd!("jwtinfo");
+    let key_path = format!(
+        "{}/src/jwe/tests/fixtures/priv_simple_token.pem",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    cmd.arg("--key")
+        .arg(key_path)
+        .arg(TEST_JWT)
+        .assert()
+        .success()
+        .stderr(predicate::str::contains(
+            "the --key flag is only applicable to JWE tokens",
+        ))
+        .stdout(predicate::str::contains(r#"{"foo":"bar"}"#));
+}
