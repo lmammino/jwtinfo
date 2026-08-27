@@ -15,6 +15,7 @@ A command line tool to get information about
 ## Features
 
 ### CLI Tool
+
 - **Decode JWT tokens** without verification - quickly inspect header and claims
 - **Multiple display modes**: view body only (default), header only (`--header`), or both (`--full`)
 - **Pretty printing** with `--pretty` flag for readable JSON output
@@ -23,9 +24,10 @@ A command line tool to get information about
 - **Composable** - works seamlessly with tools like `jq` for advanced JSON processing
 
 ### Rust Library
-- **Simple parsing API** - `jwt::parse()` function for easy token decoding
+
+- **Simple parsing API** - `jws::parse()` function for easy token decoding
 - **Type-safe access** - header and body exposed as `serde_json::Value`
-- **FromStr implementation** - parse tokens using `.parse::<jwt::Token>()`
+- **FromStr implementation** - parse tokens using `.parse::<jws::JwsToken>()`
 - **No verification** - focused on inspection and debugging, not validation
 - **JWE support** - detects encrypted tokens and handles them appropriately
 
@@ -70,7 +72,10 @@ jwtinfo --full eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwi
 Which will print:
 
 ```json
-{"header":{"alg":"HS256","typ":"JWT"},"claims":{"sub":"1234567890","name":"John Doe","iat":1516239022}}
+{
+    "header": { "alg": "HS256", "typ": "JWT" },
+    "claims": { "sub": "1234567890", "name": "John Doe", "iat": 1516239022 }
+}
 ```
 
 For better readability, you can combine `--full` with the `--pretty` flag to
@@ -84,15 +89,15 @@ Which will print:
 
 ```json
 {
-  "header": {
-    "alg": "HS256",
-    "typ": "JWT"
-  },
-  "claims": {
-    "sub": "1234567890",
-    "name": "John Doe",
-    "iat": 1516239022
-  }
+    "header": {
+        "alg": "HS256",
+        "typ": "JWT"
+    },
+    "claims": {
+        "sub": "1234567890",
+        "name": "John Doe",
+        "iat": 1516239022
+    }
 }
 ```
 
@@ -203,7 +208,7 @@ flake:
 ```nix
 jwtinfo = {
     url = "github:lmammino/jwtinfo";
-    inputs.nixpkgs.follows = "nixpkgs"; 
+    inputs.nixpkgs.follows = "nixpkgs";
 };
 
 # ... with home.nix
@@ -246,18 +251,18 @@ jwtinfo = "*"
 Then use it in your code:
 
 ```rust
-use jwtinfo::{jwt};
+use jwtinfo::{jws};
 let token_str = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
-let token = jwt::parse(token_str).unwrap();
+let token = jws::parse(token_str).unwrap();
 assert_eq!(token.header.to_string(), "{\"alg\":\"HS256\",\"typ\":\"JWT\"}");
 assert_eq!(token.body.to_string(), "{\"iat\":1516239022,\"name\":\"John Doe\",\"sub\":\"1234567890\"}");
 ```
 
-Since `jwt::Token` implements `str::FromStr`, you can also do the following:
+Since `jws::JwsToken` implements `str::FromStr`, you can also do the following:
 
 ```rust
-use jwtinfo::{jwt};
-let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c".parse::<jwt::Token>().unwrap();
+use jwtinfo::{jws};
+let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c".parse::<jws::JwsToken>().unwrap();
 assert_eq!(token.header.to_string(), "{\"alg\":\"HS256\",\"typ\":\"JWT\"}");
 assert_eq!(token.body.to_string(), "{\"iat\":1516239022,\"name\":\"John Doe\",\"sub\":\"1234567890\"}");
 ```
