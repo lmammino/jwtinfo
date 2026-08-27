@@ -70,15 +70,15 @@ fn main() -> Result<(), Box<dyn Error>> {
         Ok(JWToken::Jwe(_)) => {
             if let Some(key_path) = matches.get_one::<String>("key") {
                 let key = fs::read(key_path)?;
-                let (payload, is_jwt_body) = handle_jwe(token, key)?;
-                if is_jwt_body {
-                    let t = jws::parse(&payload)?;
+                let decrypted = handle_jwe(token, key)?;
+                if decrypted.is_jwt_body {
+                    let t = jws::parse(&decrypted.payload_string)?;
                     println!(
                         "{}",
                         stringify_token(t, full_flag, should_pretty_print, header_flag)?
                     );
                 } else {
-                    println!("{}", payload);
+                    println!("{}", decrypted.payload_string);
                 }
                 Ok(())
             } else {
