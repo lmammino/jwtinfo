@@ -1,0 +1,91 @@
+#[cfg(test)]
+use super::*;
+
+const TEST_JWS: &str = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmb28iOiJiYXIifQ.dtxWM6MIcgoeMgH87tGvsNDY6cHWL6MGW4LeYvnm1JA";
+const TEST_JWE: &str = include_str!("../jwe/tests/fixtures/simple_token.txt");
+
+#[test]
+fn jws_3_parts_produces_jws_token() {
+    let JWToken::Jws(t) = parse_token(TEST_JWS).unwrap() else {
+        panic!("expected Jws")
+    };
+    assert_eq!(t.header["alg"], "HS256");
+    assert_eq!(t.header["typ"], "JWT");
+    assert_eq!(t.body["foo"], "bar");
+    assert_eq!(t.signature.len(), 32);
+}
+
+#[test]
+fn jwe_5_parts_produces_jwe_token() {
+    let JWToken::Jwe(j) = parse_token(TEST_JWE.trim()).unwrap() else {
+        panic!("expected Jwe")
+    };
+    assert!(j.header.contains("A256GCM"));
+    assert_eq!(j.iv.len(), 12);
+    assert_eq!(j.tag.len(), 16);
+}
+
+#[test]
+fn too_many_or_few_parts_yield_wrong_part_count() {
+    assert!(matches!(
+        parse_token("a.b.c.d").err().unwrap(),
+        JwtParseError::WrongPartCount { found: _ }
+    ));
+    assert!(matches!(
+        parse_token("a.b").err().unwrap(),
+        JwtParseError::WrongPartCount { found: _ }
+    ));
+    assert!(matches!(
+        parse_token("a.b.c.d.e.f").err().unwrap(),
+        JwtParseError::WrongPartCount { found: _ }
+    ));
+}
+
+#[test]
+fn wrong_part_count_is_reported() {
+    assert!(matches!(
+        parse_token("a.b.c.d"),
+        Err(JwtParseError::WrongPartCount { found: 4 })
+    ));
+    assert!(matches!(
+        parse_token("a.b"),
+        Err(JwtParseError::WrongPartCount { found: 2 })
+    ));
+    assert!(matches!(
+        parse_token("a.b.c.d.e.f"),
+        Err(JwtParseError::WrongPartCount { found: 6 })
+    ));
+}
+
+#[test]
+fn invalid_chars_in_segment_are_rejected() {
+    assert!(matches!(
+        parse_token("#.b.c"),
+        Err(JwtParseError::InvalidSegment)
+    ));
+    assert!(matches!(
+        parse_token("ab==.b.c"),
+        Err(JwtParseError::InvalidSegment)
+    ));
+    assert!(matches!(
+        parse_token("a.b.c!"),
+        Err(JwtParseError::InvalidSegment)
+    ));
+}
+
+#[test]
+fn empty_input_is_rejected() {
+    assert!(matches!(
+        parse_token(""),
+        Err(JwtParseError::InvalidSegment)
+    ));
+}
+
+#[test]
+fn undecodable_b64_in_jws_header() {
+    // 'A' è base64url ma non decodifica (troppo corto) → InvalidHeader
+    assert!(matches!(
+        parse_token("AA.eyJmb28iOiJiYXIifQ.dtxWM6MIcgoeMgH87tGvsNDY6cHWL6MGW4LeYvnm1JA"),
+        Err(JwtParseError::InvalidHeader(_))
+    ));
+}

@@ -3,14 +3,14 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum ParseError {
-    /// Indicates that a given section was not correctly Base64-encoded
     #[error("Base64 error, {0}")]
     InvalidBase64(#[from] base64::DecodeError),
-    /// Indicates that a section did not contain a valid utf8 string
     #[error("UTF8 error, {0}")]
     InvalidStrUtf8(#[from] str::Utf8Error),
     #[error("UTF8 error, {0}")]
     InvalidStringUtf8(#[from] string::FromUtf8Error),
+    #[error("JSON error, {0}")]
+    InvalidJson(#[from] serde_json::error::Error),
 }
 
 /// Represents an error while parsing a JWT
@@ -97,4 +97,18 @@ pub enum JweCryptoError {
     InvalidRsaKey(String),
     #[error("Unsupported algorithm: {0}")]
     UnsupportedAlgorithm(String),
+}
+
+#[derive(Debug, Error)]
+pub enum JwtParseError {
+    #[error("Invalid Header: {0}")]
+    InvalidHeader(#[source] ParseError),
+    #[error("Invalid Body: {0}")]
+    InvalidBody(#[source] ParseError),
+    #[error("Invalid Signature: {0}")]
+    InvalidSignature(#[source] ParseError),
+    #[error("Invalid token: expected 3 parts (JWS) or 5 parts (JWE) but found {found}")]
+    WrongPartCount { found: usize },
+    #[error("Invalid base64url segment")]
+    InvalidSegment,
 }

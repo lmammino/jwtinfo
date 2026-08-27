@@ -14,7 +14,7 @@ pub struct JweHeader {
     pub extra: HashMap<String, Value>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct JweToken {
     pub header: String,
     pub aad: Vec<u8>,

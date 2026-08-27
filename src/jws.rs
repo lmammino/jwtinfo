@@ -39,7 +39,7 @@ use crate::jw_error::{JWTParseError, JWTParsePartError, ParseError};
 use crate::jw_parser::get_base64;
 
 /// Represents a JWT, composed by a header, a body and a signature
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct JwsToken {
     /// the header part of the token
     pub header: serde_json::Value,
