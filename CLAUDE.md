@@ -10,8 +10,12 @@ jwtinfo is a Rust command-line tool and library for parsing JWT (JSON Web Tokens
 
 - **Binary entry point**: `src/cli.rs` - CLI application using clap for argument parsing
 - **Library entry point**: `src/main.rs` - Exposes the public API
-- **Core JWT logic**: `src/jwt.rs` - Contains the JWT parsing implementation
-- **Tests**: `src/jwt/test.rs` - Unit tests for JWT parsing functionality
+- **Token parsing**: `src/jw_parser.rs` - winnow-based parser that detects JWS (3 parts) vs JWE (5 parts)
+- **JWS types/logic**: `src/jws.rs` - `JwsToken`, `parse()`, `FromStr`
+- **JWE decryption**: `src/jwe.rs` + `src/jwe/jwe_handler/` - decryption and `DecryptedJwe`
+- **Output formatting**: `src/jw_output.rs` - generic flag-driven rendering (`stringify`)
+- **Errors**: `src/jw_error.rs` - `ParseError`, `JwtParseError`, `JweError`
+- **Unit tests**: `src/jws/test.rs`, `src/jwe/test.rs`, `src/jw_parser/test.rs`
 
 The project follows a dual structure:
 
@@ -31,7 +35,7 @@ cargo build --release # Build optimized release
 
 ```bash
 cargo test           # Run all tests
-cargo test jwt       # Run specific module tests
+cargo test jws       # Run specific module tests
 ```
 
 ### Linting and Formatting
@@ -75,22 +79,40 @@ nix shell github:lmammino/jwtinfo -c jwtinfo <token>  # Try without installing
 
 ### JWT Token Structure
 
-The `Token` struct in `src/jwt.rs` contains:
+The `JwsToken` struct in `src/jws.rs` contains:
 
 - `header`: JWT header as `serde_json::Value`
 - `body`: JWT payload as `serde_json::Value`
 - `signature`: Signature bytes (unused in current implementation)
 
+### Token parsing (`src/jw_parser.rs`)
+
+- `parse_token(&str) -> Result<JWToken, JwtParseError>` - entry point; detects JWS vs JWE by part count (3 vs 5) using winnow
+- `JWToken` enum: `Jws(JwsToken)` | `Jwe(JweToken)`
+- `parse_jwe(&str) -> Result<JweToken, JwtParseError>` - convenience wrapper
+
+### Output formatting (`src/jw_output.rs`)
+
+- `stringify<T: TokenContent>(jwe_header, content, full, pretty, header)` - single generic renderer
+- `TokenContent` implemented for `JwsToken` and `String` (plaintext JWE payload)
+- `jwe_header: Option<Value>` - `Some` when there is an outer JWE level
+- `Output` enum distinguishes `Json` (serialized) from `Raw` (verbatim plaintext)
+
 ### Error Handling
 
-Two-level error hierarchy:
+Error hierarchy in `src/jw_error.rs`:
 
-- `JWTParseError`: Low-level parsing errors (base64, JSON, UTF-8)
-- `JWTParsePartError`: High-level errors indicating which JWT part failed
+- `ParseError`: Low-level parsing errors (base64, JSON, UTF-8)
+- `JwtParseError`: High-level errors indicating which token part failed (Header/Body/Signature), wrong part count, or invalid segment
+- `JweError`: wraps JWE parsing, JSON, UTF-8 and crypto errors
+- `JweCryptoError`: decryption/algorithm errors
 
 ### CLI Features
 
 - Reads JWT from command line argument or stdin (use "-")
-- `--header` flag to show header instead of body
+- `--header` flag to show header(s) instead of body
+- `--full` flag to show all sections (header + claims)
 - `--pretty` flag for formatted JSON output
+- `--key` flag to decrypt JWE tokens; on a JWS token it warns but continues
+- For a nested JWE->JWS token (with `--key`), `--header`/`--full` include both the outer `jwe_header` and the inner `jws_header`
 

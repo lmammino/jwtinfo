@@ -1,6 +1,7 @@
 use std::string;
 use thiserror::Error;
 
+/// Low-level decoding errors (Base64, UTF-8, JSON).
 #[derive(Debug, Error)]
 pub enum ParseError {
     #[error("Base64 error, {0}")]
@@ -11,6 +12,7 @@ pub enum ParseError {
     InvalidJson(#[from] serde_json::error::Error),
 }
 
+/// Errors that can occur while handling a JWE token.
 #[derive(Debug, Error)]
 pub enum JweError {
     #[error("{0}")]
@@ -23,6 +25,7 @@ pub enum JweError {
     Crypto(#[from] JweCryptoError),
 }
 
+/// Errors related to JWE decryption and the underlying crypto operations.
 #[derive(Debug, Error)]
 pub enum JweCryptoError {
     #[error("CEK length mismatch: expected {expected} bytes, got {actual}")]
@@ -39,6 +42,7 @@ pub enum JweCryptoError {
     UnsupportedAlgorithm(String),
 }
 
+/// High-level token parsing errors, indicating which part failed.
 #[derive(Debug, Error)]
 pub enum JwtParseError {
     #[error("Invalid Header: {0}")]

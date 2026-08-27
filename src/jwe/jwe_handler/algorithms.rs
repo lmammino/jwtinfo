@@ -8,7 +8,10 @@ use sha2::Sha256;
 
 use crate::jw_error::JweCryptoError;
 
+/// Decrypts the content-encryption key (CEK) from the encrypted key material.
 pub trait KeyDecryptor {
+    /// Given the input key (raw CEK for `dir`, PEM private key for RSA) and the
+    /// encrypted key, returns the decrypted content-encryption key.
     fn decrypt_cek(
         &self,
         input_key: &[u8],
@@ -16,7 +19,9 @@ pub trait KeyDecryptor {
     ) -> Result<Vec<u8>, JweCryptoError>;
 }
 
+/// Decrypts the JWE payload with a content-encryption key.
 pub trait ContentDecryptor {
+    /// Authenticated decryption of `ciphertext` using `cek`, `iv`, `aad` and `tag`.
     fn decrypt_payload(
         &self,
         cek: &[u8],
@@ -27,11 +32,13 @@ pub trait ContentDecryptor {
     ) -> Result<Vec<u8>, JweCryptoError>;
 }
 
+/// AES-GCM content decryptor supporting 128-bit (`A128GCM`) and 256-bit (`A256GCM`) keys.
 pub struct AesGcmContentDecryptor {
     key_len: usize,
 }
 
 impl AesGcmContentDecryptor {
+    /// Creates a decryptor for a given CEK length in bytes (16 or 32).
     pub fn new(key_len: usize) -> Self {
         Self { key_len }
     }
@@ -83,6 +90,7 @@ impl ContentDecryptor for AesGcmContentDecryptor {
     }
 }
 
+/// Key decryptor for the `dir` algorithm: the input key is already the CEK.
 pub struct DirectKeyDecryptor;
 
 impl KeyDecryptor for DirectKeyDecryptor {
@@ -98,11 +106,13 @@ impl KeyDecryptor for DirectKeyDecryptor {
     }
 }
 
+/// RSA-OAEP key decryptor for `RSA-OAEP` and `RSA-OAEP-256`.
 pub struct RsaKeyDecryptor {
     alg_name: String,
 }
 
 impl RsaKeyDecryptor {
+    /// Creates a decryptor for the given RSA key-management algorithm name.
     pub fn new(alg_name: &str) -> Self {
         Self {
             alg_name: alg_name.to_string(),
@@ -138,9 +148,11 @@ impl KeyDecryptor for RsaKeyDecryptor {
     }
 }
 
+/// Selects the correct key and content decryptors based on the JWE algorithms.
 pub struct AlgorithmFactory;
 
 impl AlgorithmFactory {
+    /// Returns the key decryptor matching the key-management algorithm (`dir`, `RSA-OAEP`, `RSA-OAEP-256`).
     pub fn get_key_decryptor(alg: &str) -> Result<Box<dyn KeyDecryptor>, JweCryptoError> {
         match alg {
             "dir" => Ok(Box::new(DirectKeyDecryptor)),
@@ -149,6 +161,7 @@ impl AlgorithmFactory {
         }
     }
 
+    /// Returns the content decryptor matching the content-encryption algorithm (`A128GCM`, `A256GCM`).
     pub fn get_content_decryptor(enc: &str) -> Result<Box<dyn ContentDecryptor>, JweCryptoError> {
         match enc {
             "A128GCM" => Ok(Box::new(AesGcmContentDecryptor::new(16))),

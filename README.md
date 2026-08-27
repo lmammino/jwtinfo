@@ -128,6 +128,15 @@ At the moment only `.pem` keys are supported; additional formats will be added i
 > [!NOTE]
 > **Encrypted [JWE](https://datatracker.ietf.org/doc/html/rfc7516) Tokens**: If you provide an encrypted JWE token without a key, `jwtinfo` will show a placeholder message indicating that a private key is required. Use `-K/--key` to decrypt it. The header can still be inspected normally using the `--header` flag.
 
+### Display flags and token types
+
+The display flags (`--header`, `--full`, `--pretty`) apply to whichever token is being shown, including the decrypted payload:
+
+- **JWS token**: `--header` shows the header, `--full` shows `{header, claims}`.
+- **JWE with a plaintext (non-JWT) payload**: `--header` shows the JWE header, `--full` shows `{header, payload}`. Without any flag the raw plaintext is printed.
+- **JWE wrapping a nested JWT** (via the `cty: "JWT"` header): `--header` shows both headers as `{jwe_header, jws_header}`, `--full` shows `{jwe_header, jws_header, claims}`.
+- **`--key` on a JWS token**: a warning is printed on stderr and the flag is ignored, but the JWS is still decoded normally.
+
 ## Install
 
 You can install the binary in several ways:

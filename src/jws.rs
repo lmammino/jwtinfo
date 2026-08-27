@@ -69,13 +69,18 @@ impl str::FromStr for JwsToken {
     }
 }
 
-/// Parses a token from a string
+/// Message shown as the body when a JWE token is provided without a key.
+const JWE_PLACEHOLDER: &str = "Detected a JWE token but no private key was provided. Please use the -K/--key flag to decrypt it.";
+
+/// Parses a token from a string.
+///
+/// For a JWS token, the header and body are decoded and the signature is kept
+/// as bytes. For a JWE token provided without a key, the header is decoded and
+/// the body is replaced with a placeholder message.
 ///
 /// # Errors
 ///
 /// This function will return a `JwtParseError` if the token cannot be successfully parsed
-const JWE_PLACEHOLDER: &str = "Detected a JWE token but no private key was provided. Please use the -K/--key flag to decrypt it.";
-
 pub fn parse<T: AsRef<str>>(token: T) -> Result<JwsToken, JwtParseError> {
     let token = token.as_ref();
     match parse_token(token)? {

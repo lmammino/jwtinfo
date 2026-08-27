@@ -62,6 +62,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     match parse_token(&token) {
         Ok(JWToken::Jws(t)) => {
+            // The --key flag is only meaningful for JWE tokens.
             if matches.get_one::<String>("key").is_some() {
                 eprintln!("Warning: the --key flag is only applicable to JWE tokens; ignoring it");
             }
@@ -73,6 +74,9 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
         Ok(JWToken::Jwe(jwe)) => {
             if let Some(key_path) = matches.get_one::<String>("key") {
+                // Decrypt and render. If the payload is a nested JWT we show the
+                // outer JWE header together with the inner JWS; otherwise the
+                // flags apply to the JWE header and the raw plaintext.
                 let key = fs::read(key_path)?;
                 let decrypted = handle_jwe(token, key)?;
                 let jwe_header: Value = serde_json::from_str(&jwe.header)?;
@@ -97,6 +101,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 println!("{}", output);
                 Ok(())
             } else {
+                // No key: render the JWE header with a placeholder body.
                 let t = jws::parse(&token)?;
                 println!(
                     "{}",
