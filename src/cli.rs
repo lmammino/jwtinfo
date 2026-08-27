@@ -1,4 +1,7 @@
-use jwtinfo::jws;
+use jwtinfo::{
+    jw_parser::{parse_token, JWToken},
+    jws,
+};
 
 use clap::{Arg, ArgAction, Command};
 use jwtinfo::jwe::handle_jwe;
@@ -48,7 +51,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     let should_pretty_print = matches.get_flag("pretty");
     let header_flag = matches.get_flag("header");
     let mut token = matches.remove_one::<String>("token").unwrap();
-    let mut is_jwt_body = false;
     let mut buffer = String::new();
 
     // if the token is "-" read it from stdin
@@ -57,29 +59,40 @@ fn main() -> Result<(), Box<dyn Error>> {
         token = (buffer.trim()).to_string();
     }
 
-    // if there is a key must be a JWE
-    if let Some(key_path) = matches.get_one::<String>("key") {
-        let key = fs::read(key_path)?;
-        // handle_jwe returns the JWE payload, which could be a UTF-8 string or a
-        // JWT to decode (currently we don't handle payload as byte arrays)
-        (token, is_jwt_body) = handle_jwe(token, key)?;
-    }
-
-    match jws::parse(&token) {
-        Ok(jwt_token) => {
-            let stringified =
-                stringify_token(jwt_token, full_flag, should_pretty_print, header_flag)?;
-            println!("{}", stringified);
+    match parse_token(&token) {
+        Ok(JWToken::Jws(t)) => {
+            println!(
+                "{}",
+                stringify_token(t, full_flag, should_pretty_print, header_flag)?
+            );
             Ok(())
         }
-        Err(e) => {
-            if !is_jwt_body {
-                println!("{}", token);
+        Ok(JWToken::Jwe(_)) => {
+            if let Some(key_path) = matches.get_one::<String>("key") {
+                let key = fs::read(key_path)?;
+                let (payload, is_jwt_body) = handle_jwe(token, key)?;
+                if is_jwt_body {
+                    let t = jws::parse(&payload)?;
+                    println!(
+                        "{}",
+                        stringify_token(t, full_flag, should_pretty_print, header_flag)?
+                    );
+                } else {
+                    println!("{}", payload);
+                }
                 Ok(())
             } else {
-                eprintln!("Error with token: {}\nDetail: {}", token, e);
-                Err(e.into())
+                let t = jws::parse(&token)?;
+                println!(
+                    "{}",
+                    stringify_token(t, full_flag, should_pretty_print, header_flag)?
+                );
+                Ok(())
             }
+        }
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            Err(e.into())
         }
     }
 }

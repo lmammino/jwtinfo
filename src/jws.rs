@@ -31,12 +31,13 @@
 //! ```
 
 use serde_json::to_string_pretty;
+use serde_json::Value;
 use std::{error::Error, str};
 
-use base64::Engine as _;
-
-use crate::jw_error::{JWTParseError, JWTParsePartError, ParseError};
-use crate::jw_parser::get_base64;
+use crate::jw_error::JwtParseError;
+use crate::jw_error::ParseError;
+use crate::jw_parser::parse_token;
+use crate::jw_parser::JWToken;
 
 /// Represents a JWT, composed by a header, a body and a signature
 #[derive(Debug, PartialEq, Eq)]
@@ -62,36 +63,10 @@ impl JwsToken {
 }
 
 impl str::FromStr for JwsToken {
-    type Err = JWTParsePartError;
+    type Err = JwtParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         parse(s)
-    }
-}
-
-#[doc(hidden)]
-fn parse_base64_string(s: &str) -> Result<String, ParseError> {
-    let s = get_base64().decode(s)?;
-    let s = str::from_utf8(&s)?;
-    Ok(s.to_string())
-}
-
-#[doc(hidden)]
-fn parse_header_or_body(raw: Option<&str>) -> Result<serde_json::Value, JWTParseError> {
-    match raw {
-        None => Err(JWTParseError::MissingSection),
-        Some(s) => {
-            let str = parse_base64_string(s)?;
-            Ok(serde_json::from_str(&str)?)
-        }
-    }
-}
-
-#[doc(hidden)]
-fn parse_signature(raw_signature: Option<&str>) -> Result<Vec<u8>, JWTParseError> {
-    match raw_signature {
-        None => Err(JWTParseError::MissingSection),
-        Some(s) => Ok(get_base64().decode(s)?),
     }
 }
 
@@ -99,31 +74,22 @@ fn parse_signature(raw_signature: Option<&str>) -> Result<Vec<u8>, JWTParseError
 ///
 /// # Errors
 ///
-/// This function will return a `JWTParsePartError` if the token cannot be successfully parsed
-pub fn parse<T: AsRef<str>>(token: T) -> Result<JwsToken, JWTParsePartError> {
-    let mut parts = token.as_ref().split('.');
-    let header = parse_header_or_body(parts.next()).map_err(JWTParsePartError::Header)?; // Check if this is an encrypted JWE token
-    if header.get("enc").is_some() {
-        // For encrypted tokens (JWE), we cannot read the body without decryption.
-        // Return a token with the header and a placeholder message for the body.
-        // JWE tokens have 5 parts instead of 3, so we skip validation of the remaining parts.
-        Ok(JwsToken::new(
-            header,
-            serde_json::Value::String(
-                "Detected a JWE token but no private key was provided. Please use the -K/--key flag to decrypt it.".to_string(),
-            ),
-            Vec::new(),
-        ))
-    } else {
-        // Standard JWT token with 3 parts: header.body.signature
-        let body = parse_header_or_body(parts.next()).map_err(JWTParsePartError::Body)?;
-        let signature = parse_signature(parts.next()).map_err(JWTParsePartError::Signature)?;
+/// This function will return a `JwtParseError` if the token cannot be successfully parsed
+const JWE_PLACEHOLDER: &str = "Detected a JWE token but no private key was provided. Please use the -K/--key flag to decrypt it.";
 
-        if parts.next().is_some() {
-            return Err(JWTParsePartError::UnexpectedPart());
+pub fn parse<T: AsRef<str>>(token: T) -> Result<JwsToken, JwtParseError> {
+    let token = token.as_ref();
+    match parse_token(token)? {
+        JWToken::Jws(t) => Ok(t),
+        JWToken::Jwe(jwe) => {
+            let header: Value = serde_json::from_str(&jwe.header)
+                .map_err(|e| JwtParseError::InvalidHeader(ParseError::InvalidJson(e)))?;
+            Ok(JwsToken::new(
+                header,
+                Value::String(JWE_PLACEHOLDER.to_string()),
+                Vec::new(),
+            ))
         }
-
-        Ok(JwsToken::new(header, body, signature))
     }
 }
 

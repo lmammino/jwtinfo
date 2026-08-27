@@ -14,7 +14,7 @@ use winnow::{
 
 use crate::jw_error::{JwtParseError, ParseError};
 use crate::jwe::jwe_handler::JweToken;
-use crate::{jw_error::JweParseError, jws::JwsToken};
+use crate::jws::JwsToken;
 
 static BASE64_ENGINE: OnceLock<engine::GeneralPurpose> = OnceLock::new();
 
@@ -29,42 +29,6 @@ fn parse_base64_string(string_to_parse: &str) -> Result<String, ParseError> {
     let bytes = get_base64().decode(string_to_parse)?;
     let string = String::from_utf8(bytes)?;
     Ok(string)
-}
-
-pub fn split_jwe(token: &str) -> Result<[&str; 5], JweParseError> {
-    token
-        .split('.')
-        .collect::<Vec<&str>>()
-        .try_into()
-        .map_err(|vec: Vec<&str>| {
-            if vec.len() < 5 {
-                JweParseError::MissingParts
-            } else {
-                JweParseError::TooManyParts
-            }
-        })
-}
-
-pub fn parse_jwe(token: &str) -> Result<JweToken, JweParseError> {
-    let [b64_header, b64_key, b64_iv, b64_cipher, b64_tag] = split_jwe(token)?;
-
-    let decode = |s: &str| get_base64().decode(s);
-
-    let aad = b64_header.as_bytes().to_vec();
-    let header = parse_base64_string(b64_header)?;
-    let key_encrypted = decode(b64_key)?;
-    let iv = decode(b64_iv)?;
-    let ciphertext = decode(b64_cipher)?;
-    let tag = decode(b64_tag)?;
-
-    Ok(JweToken::new(
-        header,
-        aad,
-        key_encrypted,
-        iv,
-        ciphertext,
-        tag,
-    ))
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -135,5 +99,13 @@ pub fn parse_token(token_str: &str) -> Result<JWToken, JwtParseError> {
         other => Err(JwtParseError::WrongPartCount { found: other.len() }),
     }
 }
+
+pub fn parse_jwe(token_str: &str) -> Result<JweToken, JwtParseError> {
+    match parse_token(token_str)? {
+        JWToken::Jwe(j) => Ok(j),
+        JWToken::Jws(_) => Err(JwtParseError::WrongPartCount { found: 3 }),
+    }
+}
+
 #[cfg(test)]
 mod test;

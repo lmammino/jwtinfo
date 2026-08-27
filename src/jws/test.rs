@@ -69,7 +69,7 @@ fn assert_parse_fails_due_to_more_then_three_fragment() {
     let token = String::from("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmb28iOiJiYXIifQ.dtxWM6MIcgoeMgH87tGvsNDY6cHWL6MGW4LeYvnm1JA.one_more_fragment");
     let parsed_token = parse(token);
     assert_eq!(
-        String::from("Error: Unexpected fragment after signature"),
+        String::from("Invalid token: expected 3 parts (JWS) or 5 parts (JWE) but found 4"),
         parsed_token.unwrap_err().to_string()
     );
 }
@@ -79,7 +79,7 @@ fn assert_parse_fails_due_to_missing_body() {
     let token = String::from("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9");
     let parsed_token = parse(token);
     assert_eq!(
-        String::from("Invalid Body: Missing token section"),
+        String::from("Invalid token: expected 3 parts (JWS) or 5 parts (JWE) but found 1"),
         parsed_token.unwrap_err().to_string()
     );
 }
@@ -89,7 +89,7 @@ fn assert_parse_fails_due_to_missing_signature() {
     let token = String::from("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmb28iOiJiYXIifQ");
     let parsed_token = parse(token);
     assert_eq!(
-        String::from("Invalid Signature: Missing token section"),
+        String::from("Invalid token: expected 3 parts (JWS) or 5 parts (JWE) but found 2"),
         parsed_token.unwrap_err().to_string()
     );
 }
@@ -117,10 +117,7 @@ fn assert_fails_with_non_base64_header() {
     );
     let parsed_token = parse(token);
     let err = format!("{}", parsed_token.unwrap_err());
-    assert_eq!(
-        err,
-        "Invalid Header: Base64 error, Invalid symbol 196, offset 0."
-    );
+    assert_eq!(err, "Invalid base64url segment");
 }
 
 #[test]
@@ -130,10 +127,7 @@ fn assert_fails_with_non_base64_body() {
     );
     let parsed_token = parse(token);
     let err = format!("{}", parsed_token.unwrap_err());
-    assert_eq!(
-        err,
-        "Invalid Body: Base64 error, Invalid symbol 196, offset 0."
-    );
+    assert_eq!(err, "Invalid base64url segment");
 }
 
 #[test]
@@ -143,10 +137,7 @@ fn assert_fails_with_non_base64_signature() {
     );
     let parsed_token = parse(token);
     let err = format!("{}", parsed_token.unwrap_err());
-    assert_eq!(
-        err,
-        "Invalid Signature: Base64 error, Invalid symbol 196, offset 0."
-    );
+    assert_eq!(err, "Invalid base64url segment");
 }
 
 #[test]
@@ -154,10 +145,7 @@ fn assert_fails_with_non_valid_token() {
     let token = String::from(r"I'm \x00\x09writing \x52\x75\x73\x74!\x00\x09");
     let parsed_token = parse(token);
     let err = format!("{}", parsed_token.unwrap_err());
-    assert_eq!(
-        err,
-        "Invalid Header: Base64 error, Invalid symbol 39, offset 1."
-    );
+    assert_eq!(err, "Invalid base64url segment");
 }
 
 #[test]
@@ -167,10 +155,7 @@ fn assert_fails_with_token_from_invalid_lossy_utf8() {
     );
     let parsed_token = parse(token);
     let err = format!("{}", parsed_token.unwrap_err());
-    assert_eq!(
-        err,
-        "Invalid Header: Base64 error, Invalid symbol 0, offset 0."
-    );
+    assert_eq!(err, "Invalid base64url segment");
 }
 
 #[test]

@@ -87,8 +87,8 @@ fn test_invalid_jwt_returns_error() {
     let mut cmd = cargo_bin_cmd!("jwtinfo");
     cmd.arg("invalid.jwt.token")
         .assert()
-        .success()
-        .stdout(predicate::str::contains("invalid.jwt.token"));
+        .failure()
+        .stderr(predicate::str::contains("Invalid Header"));
 }
 
 #[test]
