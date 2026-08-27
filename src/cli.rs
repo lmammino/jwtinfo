@@ -1,11 +1,12 @@
 use jwtinfo::{
+    jw_output::stringify,
     jw_parser::{parse_token, JWToken},
     jws,
 };
 
 use clap::{Arg, ArgAction, Command};
 use jwtinfo::jwe::handle_jwe;
-use jwtinfo::jws::stringify_token;
+use serde_json::Value;
 use std::{
     error::Error,
     fs,
@@ -61,31 +62,45 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     match parse_token(&token) {
         Ok(JWToken::Jws(t)) => {
+            if matches.get_one::<String>("key").is_some() {
+                eprintln!("Warning: the --key flag is only applicable to JWE tokens; ignoring it");
+            }
             println!(
                 "{}",
-                stringify_token(t, full_flag, should_pretty_print, header_flag)?
+                stringify(None, t, full_flag, should_pretty_print, header_flag)?
             );
             Ok(())
         }
-        Ok(JWToken::Jwe(_)) => {
+        Ok(JWToken::Jwe(jwe)) => {
             if let Some(key_path) = matches.get_one::<String>("key") {
                 let key = fs::read(key_path)?;
                 let decrypted = handle_jwe(token, key)?;
-                if decrypted.is_jwt_body {
-                    let t = jws::parse(&decrypted.payload_string)?;
-                    println!(
-                        "{}",
-                        stringify_token(t, full_flag, should_pretty_print, header_flag)?
-                    );
+                let jwe_header: Value = serde_json::from_str(&jwe.header)?;
+                let output = if decrypted.is_jwt_body {
+                    let content = jws::parse(&decrypted.payload_string)?;
+                    stringify(
+                        Some(jwe_header),
+                        content,
+                        full_flag,
+                        should_pretty_print,
+                        header_flag,
+                    )?
                 } else {
-                    println!("{}", decrypted.payload_string);
-                }
+                    stringify(
+                        Some(jwe_header),
+                        decrypted.payload_string,
+                        full_flag,
+                        should_pretty_print,
+                        header_flag,
+                    )?
+                };
+                println!("{}", output);
                 Ok(())
             } else {
                 let t = jws::parse(&token)?;
                 println!(
                     "{}",
-                    stringify_token(t, full_flag, should_pretty_print, header_flag)?
+                    stringify(None, t, full_flag, should_pretty_print, header_flag)?
                 );
                 Ok(())
             }

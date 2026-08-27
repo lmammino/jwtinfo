@@ -30,9 +30,8 @@
 //! assert_eq!(token.body.to_string(), "{\"iat\":1516239022,\"name\":\"John Doe\",\"sub\":\"1234567890\"}");
 //! ```
 
-use serde_json::to_string_pretty;
 use serde_json::Value;
-use std::{error::Error, str};
+use std::str;
 
 use crate::jw_error::JwtParseError;
 use crate::jw_error::ParseError;
@@ -91,39 +90,6 @@ pub fn parse<T: AsRef<str>>(token: T) -> Result<JwsToken, JwtParseError> {
             ))
         }
     }
-}
-
-pub fn stringify_token(
-    jwt_token: JwsToken,
-    full_flag: bool,
-    should_pretty_print: bool,
-    header_flag: bool,
-) -> Result<String, Box<dyn Error>> {
-    let stringified = if full_flag {
-        // Show both header and claims
-        let full_output = serde_json::json!({
-            "header": jwt_token.header,
-            "claims": jwt_token.body
-        });
-        if should_pretty_print {
-            to_string_pretty(&full_output)?
-        } else {
-            full_output.to_string()
-        }
-    } else {
-        // Show either header or body
-        let part = if header_flag {
-            jwt_token.header
-        } else {
-            jwt_token.body
-        };
-        if should_pretty_print {
-            to_string_pretty(&part)?
-        } else {
-            part.to_string()
-        }
-    };
-    Ok(stringified)
 }
 
 #[cfg(test)]

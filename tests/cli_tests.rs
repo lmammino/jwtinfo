@@ -176,3 +176,49 @@ fn test_jwe_with_key_decrypts_payload() {
         .success()
         .stdout(predicate::str::contains(TEST_JWE_DECRYPTED));
 }
+
+const TEST_NESTED_JWE: &str = include_str!("../src/jwe/tests/fixtures/jwe_nested_token.txt");
+const TEST_NESTED_JWE_KEY: &str = "src/jwe/tests/fixtures/priv_key_nested_jwt.pem";
+
+#[test]
+fn test_nested_jwe_default_shows_inner_claims() {
+    let mut cmd = cargo_bin_cmd!("jwtinfo");
+    cmd.arg("--key")
+        .arg(TEST_NESTED_JWE_KEY)
+        .arg(TEST_NESTED_JWE)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(r#""iss":"mittente""#))
+        .stdout(predicate::str::contains(
+            r#""msg":"Questo e' un messaggio super segreto!""#,
+        ));
+}
+
+#[test]
+fn test_nested_jwe_header_flag_shows_both_headers() {
+    let mut cmd = cargo_bin_cmd!("jwtinfo");
+    cmd.arg("--key")
+        .arg(TEST_NESTED_JWE_KEY)
+        .arg("--header")
+        .arg(TEST_NESTED_JWE)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(r#""jwe_header":"#))
+        .stdout(predicate::str::contains(r#""jws_header":"#))
+        .stdout(predicate::str::contains(r#""alg":"HS256""#));
+}
+
+#[test]
+fn test_nested_jwe_full_flag_shows_complete_structure() {
+    let mut cmd = cargo_bin_cmd!("jwtinfo");
+    cmd.arg("--key")
+        .arg(TEST_NESTED_JWE_KEY)
+        .arg("--full")
+        .arg(TEST_NESTED_JWE)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(r#""jwe_header":"#))
+        .stdout(predicate::str::contains(r#""jws_header":"#))
+        .stdout(predicate::str::contains(r#""claims":"#))
+        .stdout(predicate::str::contains(r#""iss":"mittente""#));
+}

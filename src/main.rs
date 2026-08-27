@@ -59,6 +59,7 @@
 //! ```
 
 pub mod jw_error;
+pub mod jw_output;
 pub mod jw_parser;
 pub mod jwe;
 pub mod jws;
