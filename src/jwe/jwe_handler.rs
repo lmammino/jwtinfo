@@ -1,4 +1,6 @@
-mod algorithms;
+pub mod decryptor;
+pub mod key_loader;
+
 mod jwe_token;
-pub use algorithms::AlgorithmFactory;
+
 pub use jwe_token::{JweHeader, JweToken};

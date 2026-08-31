@@ -118,8 +118,17 @@ jwtinfo --key /path/to/private.pem "$(cat /path/to/jwe.txt)"
 
 Supported algorithms:
 
-- **Key management (`alg`)**: `dir`, `RSA-OAEP`, `RSA-OAEP-256`
+- **Key management (`alg`)**: `dir`, `RSA-OAEP`, `RSA-OAEP-256`, `A128KW`, `A192KW`, `A256KW`, `A128GCMKW`, `A256GCMKW`
 - **Content encryption (`enc`)**: `A128GCM`, `A256GCM`
+
+Not yet supported: `RSA1_5`, `ECDH-ES` (+KW variants), `PBES2-*` (password-based encryption), the `A192GCM`/`A192GCMKW` variants, and the `A128CBC-HS256`/`A192CBC-HS384`/`A256CBC-HS512` content-encryption family.
+
+Supported key formats (auto-detected):
+
+- **PEM**: RSA (`PKCS#1` / `PKCS#8`) and EC `P-256`/`P-384` (`SEC1` / `PKCS#8`)
+- **DER**: the binary equivalents of the above
+- **JWK**: a JSON Web Key file (`kty` of `RSA`, `EC` or `oct`)
+- **Raw bytes**: symmetric keys of 16/24/32 bytes (for `dir`, `AES-KW`, `GCMKW`)
 
 For `dir`, the key file must contain the raw content-encryption key (CEK) bytes.
 For RSA-based algorithms, the key file must be a PEM-encoded private key in PKCS#1 or PKCS#8 format.
@@ -264,7 +273,7 @@ use jwtinfo::{jws};
 let token_str = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
 let token = jws::parse(token_str).unwrap();
 assert_eq!(token.header.to_string(), "{\"alg\":\"HS256\",\"typ\":\"JWT\"}");
-assert_eq!(token.body.to_string(), "{\"iat\":1516239022,\"name\":\"John Doe\",\"sub\":\"1234567890\"}");
+assert_eq!(token.body.to_string(), "{\"sub\":\"1234567890\",\"name\":\"John Doe\",\"iat\":1516239022}");
 ```
 
 Since `jws::JwsToken` implements `str::FromStr`, you can also do the following:
@@ -273,7 +282,7 @@ Since `jws::JwsToken` implements `str::FromStr`, you can also do the following:
 use jwtinfo::{jws};
 let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c".parse::<jws::JwsToken>().unwrap();
 assert_eq!(token.header.to_string(), "{\"alg\":\"HS256\",\"typ\":\"JWT\"}");
-assert_eq!(token.body.to_string(), "{\"iat\":1516239022,\"name\":\"John Doe\",\"sub\":\"1234567890\"}");
+assert_eq!(token.body.to_string(), "{\"sub\":\"1234567890\",\"name\":\"John Doe\",\"iat\":1516239022}");
 ```
 
 ## Coverage reports

@@ -18,7 +18,14 @@ fn assert_parse_jwe_header_fields() {
 #[test]
 fn assert_handle_jwe_decrypts_payload() {
     let token = EXAMPLE_JWE.trim().to_string();
-    let decrypted = handle_jwe(token, EXAMPLE_JWE_KEY.to_vec()).unwrap();
+    let decrypted = handle_jwe(token, Some(EXAMPLE_JWE_KEY.to_vec())).unwrap();
     assert_eq!(decrypted.payload_string, "This is a super secret message!");
     assert!(!decrypted.is_jwt_body);
+}
+
+#[test]
+fn assert_handle_jwe_without_key_fails() {
+    let token = EXAMPLE_JWE.trim().to_string();
+    let err = handle_jwe(token, None).unwrap_err();
+    assert!(err.to_string().contains("--key"));
 }

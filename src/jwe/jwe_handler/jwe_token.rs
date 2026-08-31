@@ -2,8 +2,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 
-use crate::{jw_error::JweCryptoError, jwe::jwe_handler::algorithms::ContentDecryptor};
-
 /// The protected JWE header, deserialized from the token's first segment.
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct JweHeader {
@@ -54,14 +52,5 @@ impl JweToken {
             ciphertext,
             tag,
         }
-    }
-
-    /// Decrypts the payload using the given content decryptor and content-encryption key.
-    pub fn decrypt_content(
-        &self,
-        decryptor: &dyn ContentDecryptor,
-        cek: &[u8],
-    ) -> Result<Vec<u8>, JweCryptoError> {
-        decryptor.decrypt_payload(cek, &self.aad, &self.iv, &self.ciphertext, &self.tag)
     }
 }

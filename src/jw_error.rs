@@ -21,6 +21,8 @@ pub enum JweError {
     Json(#[from] serde_json::Error),
     #[error("Invalid UTF-8 string: {0}")]
     InvalidUtf8(#[from] string::FromUtf8Error),
+    #[error("No key provided: use the --key flag to decrypt this JWE")]
+    MissingKey,
     #[error("{0}")]
     Crypto(#[from] JweCryptoError),
 }
@@ -36,6 +38,8 @@ pub enum JweCryptoError {
     UnsupportedKeyLength(usize),
     #[error("Decryption failed: {0}")]
     DecryptionFailed(String),
+    #[error("Invalid key: {0}")]
+    InvalidKey(String),
     #[error("Invalid RSA key: {0}")]
     InvalidRsaKey(String),
     #[error("Unsupported algorithm: {0}")]

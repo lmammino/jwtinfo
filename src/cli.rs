@@ -44,7 +44,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             Arg::new("key")
                 .short('K')
                 .long("key")
-                .help("the path to the private key for the cek decryption in case of JWE"),
+                .help("path to the key file (PEM/DER/JWK or raw bytes) to decrypt a JWE"),
         ])
         .get_matches();
 
@@ -77,7 +77,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 // Decrypt and render. If the payload is a nested JWT we show the
                 // outer JWE header together with the inner JWS; otherwise the
                 // flags apply to the JWE header and the raw plaintext.
-                let key = fs::read(key_path)?;
+                let key = Some(fs::read(key_path)?);
                 let decrypted = handle_jwe(token, key)?;
                 let jwe_header: Value = serde_json::from_str(&jwe.header)?;
                 let output = if decrypted.is_jwt_body {
