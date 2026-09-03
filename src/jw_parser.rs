@@ -120,7 +120,7 @@ pub fn parse_token(token_str: &str) -> Result<JWToken, JwtParseError> {
 pub fn parse_jwe(token_str: &str) -> Result<JweToken, JwtParseError> {
     match parse_token(token_str)? {
         JWToken::Jwe(j) => Ok(j),
-        JWToken::Jws(_) => Err(JwtParseError::WrongPartCount { found: 3 }),
+        JWToken::Jws(_) => Err(JwtParseError::NotAJwe),
     }
 }
 

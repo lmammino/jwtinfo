@@ -113,3 +113,15 @@ fn undecodable_b64_in_jws_header() {
         Err(JwtParseError::InvalidHeader(_))
     ));
 }
+
+#[test]
+fn parse_jwe_on_a_jws_reports_not_a_jwe() {
+    // Previously this reported "expected 3 parts (JWS) or 5 parts (JWE) but
+    // found 3", which is confusing for a perfectly valid JWS.
+    let err = parse_jwe(TEST_JWS).unwrap_err();
+    assert!(matches!(err, JwtParseError::NotAJwe));
+    assert_eq!(
+        err.to_string(),
+        "Expected a JWE token (5 parts), but the input is a JWS (3 parts)"
+    );
+}

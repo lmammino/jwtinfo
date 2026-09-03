@@ -59,4 +59,6 @@ pub enum JwtParseError {
     WrongPartCount { found: usize },
     #[error("Invalid base64url segment")]
     InvalidSegment,
+    #[error("Expected a JWE token (5 parts), but the input is a JWS (3 parts)")]
+    NotAJwe,
 }
