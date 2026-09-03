@@ -6,7 +6,7 @@ use base64::{
 use serde_json::Value;
 use std::sync::OnceLock;
 use winnow::{
-    combinator::separated,
+    combinator::{alt, eof, terminated},
     error::{StrContext, StrContextValue},
     token::take_while,
     Parser,
@@ -48,15 +48,100 @@ fn is_base64url_char(c: char) -> bool {
     c.is_ascii_alphanumeric() || c == '-' || c == '_'
 }
 
-/// Parses a single Base64url segment. Segments may be empty: an empty
-/// signature is allowed for unsecured JWTs (`alg: none`, RFC 7518 §3) and an
-/// empty encrypted key is the norm for `dir` JWEs (RFC 7516 §4.5).
-fn segment<'s>(input: &mut &'s str) -> winnow::Result<&'s str> {
-    take_while(0.., is_base64url_char)
+/// A non-empty Base64url segment (RFC 7515 §2).
+fn b64url<'s>(input: &mut &'s str) -> winnow::Result<&'s str> {
+    take_while(1.., is_base64url_char)
         .context(StrContext::Expected(StrContextValue::Description(
             "base64url segment",
         )))
         .parse_next(input)
+}
+
+/// A Base64url segment that may be empty. Required for the unsecured-JWT
+/// signature (`alg: none`, RFC 7518 §3) and the `dir` encrypted key
+/// (RFC 7516 §4.5); also used for the JWE iv/ciphertext/tag segments, which
+/// are validated by the content-encryption layer rather than the grammar.
+fn b64url_or_empty<'s>(input: &mut &'s str) -> winnow::Result<&'s str> {
+    take_while(0.., is_base64url_char)
+        .context(StrContext::Expected(StrContextValue::Description(
+            "base64url segment (possibly empty)",
+        )))
+        .parse_next(input)
+}
+
+/// The syntactic shape of a token, mirroring the RFC compact-serialization
+/// ABNF. The variant payload is the *whole* token string: the grammar's job
+/// is validation and classification, and segment boundaries are re-derived
+/// by splitting, which is infallible because the grammar already validated
+/// the exact dot arrangement.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Shape<'s> {
+    /// A 3-segment JWS (header.payload.signature).
+    Jws(&'s str),
+    /// A 5-segment JWE (header.encrypted-key.iv.ciphertext.tag).
+    Jwe(&'s str),
+}
+
+/// `JWS-Compact = BASE64URL(header) '.' BASE64URL(payload) '.' BASE64URL(signature)`
+/// where the signature segment is empty for unsecured JWTs (RFC 7518 §3).
+fn jws_shape<'s>(input: &mut &'s str) -> winnow::Result<Shape<'s>> {
+    (b64url, ".", b64url_or_empty, ".", b64url_or_empty)
+        .take()
+        .map(Shape::Jws)
+        .context(StrContext::Label("JWS"))
+        .parse_next(input)
+}
+
+/// `JWE-Compact = BASE64URL(header) '.' BASE64URL(encrypted key) '.' ...`
+/// where the encrypted-key segment is empty for `dir` (RFC 7516 §4.5).
+fn jwe_shape<'s>(input: &mut &'s str) -> winnow::Result<Shape<'s>> {
+    (
+        b64url,
+        ".",
+        b64url_or_empty, // encrypted key: empty for `dir`
+        ".",
+        b64url_or_empty, // initialization vector
+        ".",
+        b64url_or_empty, // ciphertext
+        ".",
+        b64url_or_empty, // authentication tag
+    )
+        .take()
+        .map(Shape::Jwe)
+        .context(StrContext::Label("JWE"))
+        .parse_next(input)
+}
+
+/// Both alternatives failed: classify the failure by re-scanning the raw
+/// input, since backtracking discards how many parts were found.
+fn classify(raw: &str) -> JwtParseError {
+    if raw.chars().all(|c| c == '.' || is_base64url_char(c)) {
+        let parts = raw.split('.').count();
+        if parts == 3 || parts == 5 {
+            // The shape was right, but a required segment was empty.
+            JwtParseError::InvalidSegment
+        } else {
+            JwtParseError::WrongPartCount { found: parts }
+        }
+    } else {
+        JwtParseError::InvalidSegment
+    }
+}
+
+/// Splits a grammar-validated 3-segment token into its segments.
+fn split3(raw: &str) -> [&str; 3] {
+    let mut parts = raw.split('.');
+    // Infallible: the grammar guarantees exactly two dots.
+    let mut next = || parts.next().expect("grammar-validated token");
+    [next(), next(), next()]
+}
+
+/// Splits a grammar-validated 5-segment token into its segments.
+fn split5(raw: &str) -> [&str; 5] {
+    let mut parts = raw.split('.');
+    // Infallible: the grammar guarantees exactly four dots.
+    let mut next = || parts.next().expect("grammar-validated token");
+    [next(), next(), next(), next(), next()]
 }
 
 /// Decodes a Base64url-encoded JSON value.
@@ -65,54 +150,57 @@ fn decode_json(b64: &str) -> Result<Value, ParseError> {
     Ok(serde_json::from_str(&s)?)
 }
 
+/// Decodes the segments of a grammar-validated JWS into a [`JwsToken`].
+fn decode_jws(raw: &str) -> Result<JWToken, JwtParseError> {
+    let [header, body, signature] = split3(raw);
+    let header = decode_json(header).map_err(JwtParseError::InvalidHeader)?;
+    let body = decode_json(body).map_err(JwtParseError::InvalidBody)?;
+    let signature = get_base64()
+        .decode(signature)
+        .map_err(|e| JwtParseError::InvalidSignature(ParseError::InvalidBase64(e)))?;
+    Ok(JWToken::Jws(JwsToken {
+        header,
+        body,
+        signature,
+    }))
+}
+
+/// Decodes the segments of a grammar-validated JWE into a [`JweToken`].
+fn decode_jwe(raw: &str) -> Result<JWToken, JwtParseError> {
+    let [b64_header, b64_key, b64_iv, b64_cipher, b64_tag] = split5(raw);
+    let header = parse_base64_string(b64_header).map_err(|_| JwtParseError::InvalidSegment)?;
+    let dec = |s: &str| {
+        get_base64()
+            .decode(s)
+            .map_err(|_| JwtParseError::InvalidSegment)
+    };
+    Ok(JWToken::Jwe(JweToken::new(
+        header,
+        b64_header.as_bytes().to_vec(),
+        dec(b64_key)?,
+        dec(b64_iv)?,
+        dec(b64_cipher)?,
+        dec(b64_tag)?,
+    )))
+}
+
 /// Parses a JWS or JWE token from a string.
 ///
-/// Splits the input into Base64url segments with winnow, requires it to be
-/// fully consumed (no trailing input), and dispatches on the number of parts:
-/// 3 -> `JWToken::Jws`, 5 -> `JWToken::Jwe`.
+/// The token is validated and classified by a grammar mirroring the RFC
+/// compact-serialization ABNF — an alternation of the 3-segment JWS shape
+/// and the 5-segment JWE shape, anchored at the end of input — and the
+/// segments are then decoded.
 pub fn parse_token(token_str: &str) -> Result<JWToken, JwtParseError> {
-    let mut input = token_str.trim();
-    let parts: Vec<&str> = separated(1.., segment, '.')
-        .context(StrContext::Expected(StrContextValue::Description(
-            "JWS (h.p.s) or JWE (h.k.iv.c.t)",
-        )))
+    let raw = token_str.trim();
+    let mut input = raw;
+    // `eof` is essential: without it the JWS shape would match the prefix of
+    // a longer input and leave the rest unconsumed.
+    let shape = terminated(alt((jwe_shape, jws_shape)), eof)
         .parse_next(&mut input)
-        .map_err(|_| JwtParseError::InvalidSegment)?;
-    if !input.is_empty() {
-        return Err(JwtParseError::InvalidSegment);
-    }
-
-    match parts.as_slice() {
-        [header, payload, signature] => {
-            let header = decode_json(header).map_err(JwtParseError::InvalidHeader)?;
-            let body = decode_json(payload).map_err(JwtParseError::InvalidBody)?;
-            let signature = get_base64()
-                .decode(signature)
-                .map_err(|e| JwtParseError::InvalidSignature(ParseError::InvalidBase64(e)))?;
-            Ok(JWToken::Jws(JwsToken {
-                header,
-                body,
-                signature,
-            }))
-        }
-        [b64_header, b64_key, b64_iv, b64_cipher, b64_tag] => {
-            let header =
-                parse_base64_string(b64_header).map_err(|_| JwtParseError::InvalidSegment)?;
-            let dec = |s: &str| {
-                get_base64()
-                    .decode(s)
-                    .map_err(|_| JwtParseError::InvalidSegment)
-            };
-            Ok(JWToken::Jwe(JweToken::new(
-                header,
-                b64_header.as_bytes().to_vec(),
-                dec(b64_key)?,
-                dec(b64_iv)?,
-                dec(b64_cipher)?,
-                dec(b64_tag)?,
-            )))
-        }
-        other => Err(JwtParseError::WrongPartCount { found: other.len() }),
+        .map_err(|_| classify(raw))?;
+    match shape {
+        Shape::Jws(raw) => decode_jws(raw),
+        Shape::Jwe(raw) => decode_jwe(raw),
     }
 }
 

@@ -89,7 +89,10 @@ The `JwsToken` struct in `src/jws.rs` contains:
 
 ### Token parsing (`src/jw_parser.rs`)
 
-- `parse_token(&str) -> Result<JWToken, JwtParseError>` - entry point; detects JWS vs JWE by part count (3 vs 5) using winnow
+- `parse_token(&str) -> Result<JWToken, JwtParseError>` - entry point; an alt-of-shapes winnow grammar classifies the token as JWS (3 segments) or JWE (5 segments)
+- Leaf parsers: `b64url` (non-empty segment) and `b64url_or_empty` (unsecured-JWT signature, `dir` key)
+- `Shape` enum - grammar output; each variant holds the full token string, segments are re-derived by splitting
+- `classify(&str)` - fallback error mapping (`InvalidSegment` vs `WrongPartCount`) when both shapes fail
 - `JWToken` enum: `Jws(JwsToken)` | `Jwe(JweToken)`
 - `parse_jwe(&str) -> Result<JweToken, JwtParseError>` - convenience wrapper
 

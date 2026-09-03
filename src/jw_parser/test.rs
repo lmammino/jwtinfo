@@ -125,3 +125,30 @@ fn parse_jwe_on_a_jws_reports_not_a_jwe() {
         "Expected a JWE token (5 parts), but the input is a JWS (3 parts)"
     );
 }
+
+#[test]
+fn empty_header_segment_fails_fast() {
+    // The grammar requires non-empty header segments (b64url, not
+    // b64url_or_empty), so tokens like ".p.s" are rejected structurally
+    // instead of producing a confusing empty-JSON decode error.
+    assert!(matches!(
+        parse_token(".p.s"),
+        Err(JwtParseError::InvalidSegment)
+    ));
+    // A JWE with an empty header used to parse (empty header string) and
+    // only fail later when the header was deserialized.
+    assert!(matches!(
+        parse_token("..iv.ct.tag"),
+        Err(JwtParseError::InvalidSegment)
+    ));
+}
+
+#[test]
+fn shape_grammar_rejects_prefix_matches() {
+    // The eof anchor prevents the 3-segment JWS shape from matching the
+    // prefix of a longer token.
+    assert!(matches!(
+        parse_token("a.b.c.d.e.f.g"),
+        Err(JwtParseError::WrongPartCount { found: 7 })
+    ));
+}
