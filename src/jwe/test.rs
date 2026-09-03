@@ -8,6 +8,8 @@ const EXAMPLE_JWE_KEY_DER: &[u8] = include_bytes!("tests/fixtures/priv_simple_to
 const EXAMPLE_JWE_KEY_JWK: &[u8] = include_bytes!("tests/fixtures/priv_simple_token.jwk");
 const AESKW_JWE: &str = include_str!("tests/fixtures/aeskw_token.txt");
 const AESKW_JWE_KEK_JWK: &[u8] = include_bytes!("tests/fixtures/aeskw_kek.json");
+const GCMKW_JWE: &str = include_str!("tests/fixtures/gcmkw_token.txt");
+const GCMKW_JWE_KEK: &[u8] = include_bytes!("tests/fixtures/gcmkw_kek.key");
 const DIR_JWE: &str = include_str!("tests/fixtures/dir_token.txt");
 const DIR_JWE_CEK: &[u8] = include_bytes!("tests/fixtures/dir_cek.key");
 
@@ -70,4 +72,18 @@ fn assert_handle_jwe_dir_decrypts_payload() {
     let decrypted = handle_jwe(token, Some(DIR_JWE_CEK.to_vec())).unwrap();
     assert_eq!(decrypted.payload_string, "super secret dir payload");
     assert!(!decrypted.is_jwt_body);
+}
+
+#[test]
+fn assert_handle_jwe_gcmkw_with_rfc7518_params_reports_limitation() {
+    // Known biscuit limitation: RFC 7518 §4.7 encodes the GCMKW iv/tag
+    // protected-header parameters as base64url strings, but biscuit only
+    // understands them as byte arrays. Standards-compliant tokens must fail
+    // with a clear error, not biscuit's cryptic deserialization message.
+    let token = GCMKW_JWE.trim().to_string();
+    let err = handle_jwe(token, Some(GCMKW_JWE_KEK.to_vec())).unwrap_err();
+    let msg = err.to_string();
+    assert!(msg.contains("A128GCMKW"));
+    assert!(msg.contains("RFC 7518"));
+    assert!(msg.contains("known limitation"));
 }

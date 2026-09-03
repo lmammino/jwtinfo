@@ -40,6 +40,17 @@ pub fn handle_jwe(token: String, key: Option<Vec<u8>>) -> Result<DecryptedJwe, J
             "{alg} (PBES2 is not supported yet)"
         ))
         .into());
+    } else if alg.ends_with("GCMKW") && jwe_header.has_string_gcmkw_params() {
+        // Known biscuit limitation: it expects the GCMKW `iv`/`tag` protected
+        // header parameters as JSON byte arrays, but RFC 7518 §4.7 encodes
+        // them as base64url strings (the form produced by every other JOSE
+        // library). Only biscuit-encrypted GCMKW tokens can be decrypted.
+        return Err(JweCryptoError::UnsupportedAlgorithm(format!(
+            "{alg}: the 'iv'/'tag' header parameters are base64url strings per RFC 7518 §4.7, \
+             but biscuit (used for GCMKW decryption) only understands them as byte arrays; \
+             this token cannot be decrypted (known limitation, see the README)"
+        ))
+        .into());
     } else {
         // Every other algorithm needs a key: load it once, then dispatch on
         // the parsed key material so that all formats (raw bytes, JWK, PEM,

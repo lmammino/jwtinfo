@@ -39,6 +39,11 @@
 //! (raw 16/24/32-byte file or `oct` JWK). For `dir` it must contain the raw
 //! content-encryption key (CEK) bytes.
 //!
+//! GCMKW (`A128GCMKW`/`A256GCMKW`) is subject to a known limitation of the
+//! biscuit library, which cannot parse the RFC 7518 base64url `iv`/`tag`
+//! header parameters; only biscuit-produced GCMKW tokens can be decrypted.
+//! See the README for details.
+//!
 //! ## Programmatic usage
 //!
 //! Install with cargo:

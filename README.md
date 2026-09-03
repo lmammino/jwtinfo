@@ -118,8 +118,11 @@ jwtinfo --key /path/to/private.pem "$(cat /path/to/jwe.txt)"
 
 Supported algorithms:
 
-- **Key management (`alg`)**: `dir`, `RSA-OAEP`, `RSA-OAEP-256`, `A128KW`, `A192KW`, `A256KW`, `A128GCMKW`, `A256GCMKW`
+- **Key management (`alg`)**: `dir`, `RSA-OAEP`, `RSA-OAEP-256`, `A128KW`, `A192KW`, `A256KW`
 - **Content encryption (`enc`)**: `A128GCM`, `A256GCM`
+
+> [!IMPORTANT]
+> **Known limitation — AES-GCM Key Wrap (`A128GCMKW` / `A256GCMKW`)**: GCMKW decryption is delegated to the [`biscuit`](https://crates.io/crates/biscuit) library, which expects the GCMKW `iv` and `tag` protected-header parameters as JSON *byte arrays*, while [RFC 7518 §4.7](https://datatracker.ietf.org/doc/html/rfc7518#section-4.7) defines them as base64url *strings*. As a result, only tokens produced by `biscuit` itself can be decrypted; standards-compliant tokens (as produced by most JOSE libraries) are detected up front and rejected with a clear error.
 
 Not yet supported: `RSA1_5`, `ECDH-ES` (+KW variants), `PBES2-*` (password-based encryption), the `A192GCM`/`A192GCMKW` variants, and the `A128CBC-HS256`/`A192CBC-HS384`/`A256CBC-HS512` content-encryption family.
 

@@ -54,3 +54,18 @@ impl JweToken {
         }
     }
 }
+
+impl JweHeader {
+    /// `true` when the GCMKW `iv`/`tag` parameters are carried as base64url
+    /// strings, as required by RFC 7518 §4.7 (most JOSE libraries), rather than
+    /// as JSON byte arrays, which is the form biscuit produces and accepts.
+    ///
+    /// GCMKW decryption is delegated to biscuit, which fails to deserialize
+    /// the standard form; this lets us report the limitation up front with a
+    /// clear error instead of a cryptic serde message.
+    pub(crate) fn has_string_gcmkw_params(&self) -> bool {
+        ["iv", "tag"]
+            .iter()
+            .any(|param| self.extra.get(*param).is_some_and(Value::is_string))
+    }
+}
