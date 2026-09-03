@@ -296,3 +296,31 @@ fn test_jws_with_key_warns_and_still_works() {
         ))
         .stdout(predicate::str::contains(r#"{"foo":"bar"}"#));
 }
+
+// Empty base64url segments are legitimate:
+// - unsecured JWTs (RFC 7518 §3, alg: none) have an empty signature;
+// - dir JWEs (RFC 7516 §4.5) have an empty encrypted-key segment.
+#[test]
+fn test_alg_none_jws_with_empty_signature_segment() {
+    let mut cmd = cargo_bin_cmd!("jwtinfo");
+    cmd.arg("eyJhbGciOiJub25lIn0.eyJmb28iOiJiYXIifQ.")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("{\"foo\":\"bar\"}"));
+}
+
+#[test]
+fn test_dir_jwe_with_empty_key_segment_decrypts() {
+    let mut cmd = cargo_bin_cmd!("jwtinfo");
+    let key_path = format!(
+        "{}/src/jwe/tests/fixtures/dir_cek.key",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    let token = include_str!("../src/jwe/tests/fixtures/dir_token.txt");
+    cmd.arg("--key")
+        .arg(key_path)
+        .arg(token.trim())
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("super secret dir payload"));
+}

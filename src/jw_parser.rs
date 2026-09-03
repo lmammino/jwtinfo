@@ -48,9 +48,11 @@ fn is_base64url_char(c: char) -> bool {
     c.is_ascii_alphanumeric() || c == '-' || c == '_'
 }
 
-/// Parses a single Base64url segment, requiring at least one character.
+/// Parses a single Base64url segment. Segments may be empty: an empty
+/// signature is allowed for unsecured JWTs (`alg: none`, RFC 7518 §3) and an
+/// empty encrypted key is the norm for `dir` JWEs (RFC 7516 §4.5).
 fn segment<'s>(input: &mut &'s str) -> winnow::Result<&'s str> {
-    take_while(1.., is_base64url_char)
+    take_while(0.., is_base64url_char)
         .context(StrContext::Expected(StrContextValue::Description(
             "base64url segment",
         )))
