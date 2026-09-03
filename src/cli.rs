@@ -77,7 +77,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 // outer JWE header together with the inner JWS; otherwise the
                 // flags apply to the JWE header and the raw plaintext.
                 let key = Some(fs::read(key_path)?);
-                let decrypted = decrypt_jwe(&jwe, &token, key)?;
+                let decrypted = decrypt_jwe(&jwe, key)?;
                 let jwe_header: Value = serde_json::from_str(&jwe.header)?;
                 let output = if decrypted.is_jwt_body {
                     let content = jws::parse(&decrypted.payload_string)?;

@@ -20,10 +20,12 @@ pub struct JweHeader {
 /// A parsed (but not yet decrypted) JWE token.
 #[derive(Debug, PartialEq, Eq)]
 pub struct JweToken {
+    /// The full compact serialization, kept verbatim: the biscuit decryptor
+    /// re-parses it for `dir`/GCMKW, and the raw protected-header segment
+    /// (its first segment) doubles as the authenticated associated data.
+    raw: String,
     /// The Base64url-decoded protected header, as a JSON string.
     pub header: String,
-    /// The authenticated associated data: the raw Base64url header segment.
-    pub aad: Vec<u8>,
     /// The encrypted content-encryption key (empty for `dir`).
     pub key_encrypted: Vec<u8>,
     /// The initialization vector.
@@ -35,30 +37,42 @@ pub struct JweToken {
 }
 
 impl JweToken {
-    /// Builds a `JweToken` from its raw parts.
+    /// Builds a `JweToken` from its raw compact form and decoded parts.
     pub fn new(
+        raw: String,
         header: String,
-        aad: Vec<u8>,
         key_encrypted: Vec<u8>,
         iv: Vec<u8>,
         ciphertext: Vec<u8>,
         tag: Vec<u8>,
     ) -> Self {
         Self {
+            raw,
             header,
-            aad,
             key_encrypted,
             iv,
             ciphertext,
             tag,
         }
     }
-}
 
+    /// The full compact serialization the token was parsed from.
+    pub fn raw(&self) -> &str {
+        &self.raw
+    }
+
+    /// The authenticated associated data: the raw Base64url-encoded protected
+    /// header segment, i.e. the first segment of the compact form
+    /// (RFC 7516 §5.1, step 14).
+    pub fn aad(&self) -> &[u8] {
+        self.raw.split('.').next().unwrap_or("").as_bytes()
+    }
+}
 impl JweHeader {
     /// `true` when the GCMKW `iv`/`tag` parameters are carried as base64url
-    /// strings, as required by RFC 7518 §4.7 (most JOSE libraries), rather than
-    /// as JSON byte arrays, which is the form biscuit produces and accepts.
+    /// strings, as required by RFC 7518 §4.7 (most JOSE libraries), rather
+    /// than as JSON byte arrays, which is the form biscuit produces and
+    /// accepts.
     ///
     /// GCMKW decryption is delegated to biscuit, which fails to deserialize
     /// the standard form; this lets us report the limitation up front with a

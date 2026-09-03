@@ -1,4 +1,5 @@
 use crate::jw_parser::parse_jwe;
+use crate::jwe::decrypt_jwe;
 use crate::jwe::handle_jwe;
 use crate::jwe::jwe_handler::JweHeader;
 
@@ -36,6 +37,20 @@ fn assert_handle_jwe_without_key_fails() {
     let token = EXAMPLE_JWE.trim();
     let err = handle_jwe(token, None).unwrap_err();
     assert!(err.to_string().contains("--key"));
+}
+
+#[test]
+fn assert_decrypt_jwe_accepts_pre_parsed_token() {
+    // The parsed token is self-contained: decrypt_jwe needs no access to
+    // the original string, because JweToken carries its raw compact form.
+    let parsed = parse_jwe(EXAMPLE_JWE.trim()).unwrap();
+    let decrypted = decrypt_jwe(&parsed, Some(EXAMPLE_JWE_KEY.to_vec())).unwrap();
+    assert_eq!(decrypted.payload_string, "This is a super secret message!");
+
+    // And the dir fixture exercises the biscuit path through raw():
+    let parsed = parse_jwe(DIR_JWE.trim()).unwrap();
+    let decrypted = decrypt_jwe(&parsed, Some(DIR_JWE_CEK.to_vec())).unwrap();
+    assert_eq!(decrypted.payload_string, "super secret dir payload");
 }
 
 #[test]

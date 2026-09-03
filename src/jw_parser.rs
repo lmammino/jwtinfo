@@ -175,8 +175,8 @@ fn decode_jwe(raw: &str) -> Result<JWToken, JwtParseError> {
             .map_err(|_| JwtParseError::InvalidSegment)
     };
     Ok(JWToken::Jwe(JweToken::new(
+        raw.to_string(),
         header,
-        b64_header.as_bytes().to_vec(),
         dec(b64_key)?,
         dec(b64_iv)?,
         dec(b64_cipher)?,

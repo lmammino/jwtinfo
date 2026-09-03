@@ -152,3 +152,15 @@ fn shape_grammar_rejects_prefix_matches() {
         Err(JwtParseError::WrongPartCount { found: 7 })
     ));
 }
+
+#[test]
+fn jwe_token_carries_raw_form_and_derives_aad() {
+    let token = TEST_JWE.trim();
+    let JWToken::Jwe(j) = parse_token(token).unwrap() else {
+        panic!("expected Jwe")
+    };
+    // The raw compact form is kept verbatim for decryptors that re-parse it
+    // (biscuit), and the AAD is derived from its first segment.
+    assert_eq!(j.raw(), token);
+    assert_eq!(j.aad(), token.split('.').next().unwrap().as_bytes());
+}
