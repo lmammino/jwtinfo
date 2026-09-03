@@ -107,7 +107,7 @@ fn empty_encrypted_key_segment_is_allowed() {
 
 #[test]
 fn undecodable_b64_in_jws_header() {
-    // 'A' è base64url ma non decodifica (troppo corto) → InvalidHeader
+    // 'A' is valid base64url but too short to decode → InvalidHeader
     assert!(matches!(
         parse_token("AA.eyJmb28iOiJiYXIifQ.dtxWM6MIcgoeMgH87tGvsNDY6cHWL6MGW4LeYvnm1JA"),
         Err(JwtParseError::InvalidHeader(_))

@@ -1,6 +1,7 @@
-//! # JWT
+//! # JWS
 //!
-//! `jwt` is a collection of utilities to parse JWTs (Json Web Tokens)
+//! `jws` is a collection of utilities to parse JWSs (Json Web Signatures),
+//! the three-part signed JWTs (header.payload.signature)
 //!
 //! ## Examples
 //!
@@ -38,7 +39,7 @@ use crate::jw_error::ParseError;
 use crate::jw_parser::parse_token;
 use crate::jw_parser::JWToken;
 
-/// Represents a JWT, composed by a header, a body and a signature
+/// Represents a JWS, composed by a header, a body and a signature
 #[derive(Debug, PartialEq, Eq)]
 pub struct JwsToken {
     /// the header part of the token
@@ -46,7 +47,6 @@ pub struct JwsToken {
     /// the body (or payload) of the token
     pub body: serde_json::Value,
     /// the signature data of the token
-    #[allow(unused)]
     pub signature: Vec<u8>,
 }
 
@@ -92,7 +92,7 @@ pub fn jwe_placeholder(header: Value) -> JwsToken {
 ///
 /// # Errors
 ///
-/// This function will return a `JwtParseError` if the token cannot be successfully parsed
+/// This function will return a `JwtParseError` if the token cannot be successfully parsed.
 pub fn parse<T: AsRef<str>>(token: T) -> Result<JwsToken, JwtParseError> {
     let token = token.as_ref();
     match parse_token(token)? {

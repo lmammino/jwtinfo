@@ -17,7 +17,7 @@ use std::{
 fn main() -> Result<(), Box<dyn Error>> {
     let mut matches = Command::new("jwtinfo")
         .version(env!("CARGO_PKG_VERSION"))
-        .about("Shows information about a JWT (Json Web JwsToken)")
+        .about("Shows information about a JWT (JSON Web Token)")
         .args([
             Arg::new("header")
                 .short('H')
