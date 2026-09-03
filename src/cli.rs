@@ -112,7 +112,10 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
         Err(e) => {
             eprintln!("Error: {}", e);
-            Err(e.into())
+            // The error has already been reported: exit directly instead of
+            // returning it from `main`, which would make the runtime print it
+            // a second time (in Debug form).
+            std::process::exit(1);
         }
     }
 }

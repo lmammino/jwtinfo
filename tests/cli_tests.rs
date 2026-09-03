@@ -324,3 +324,19 @@ fn test_dir_jwe_with_empty_key_segment_decrypts() {
         .success()
         .stdout(predicate::str::contains("super secret dir payload"));
 }
+
+#[test]
+fn test_invalid_token_prints_error_once() {
+    // Regression test: main() used to return the error after eprintln-ing
+    // it, so the Termination impl printed it a second time in Debug form.
+    let mut cmd = cargo_bin_cmd!("jwtinfo");
+    let output = cmd.arg("a.b.c.d").output().unwrap();
+    assert!(!output.status.success());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("expected 3 parts (JWS) or 5 parts (JWE) but found 4"));
+    assert_eq!(
+        stderr.matches("Error:").count(),
+        1,
+        "the error must be reported exactly once, stderr was: {stderr}"
+    );
+}
