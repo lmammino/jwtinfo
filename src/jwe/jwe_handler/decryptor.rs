@@ -5,8 +5,6 @@ use biscuit::jwa::{ContentEncryptionAlgorithm, KeyManagementAlgorithm};
 use biscuit::jwe::Compact;
 use biscuit::jwk::JWK;
 use biscuit::Empty;
-use rsa::pkcs1::DecodeRsaPrivateKey;
-use rsa::pkcs8::DecodePrivateKey;
 use rsa::{Oaep, RsaPrivateKey};
 use sha1::Sha1;
 use sha2::Sha256;
@@ -72,24 +70,17 @@ pub fn decrypt_aes_kw(
 /// Note: `biscuit` does not implement RSA key management (its `unwrap_key`
 /// only supports `dir` and GCMKW), so this path uses the `rsa` crate directly.
 pub fn decrypt_rsa_oaep(
-    key_bytes: &[u8],
+    key: &RsaPrivateKey,
     key_encrypted: &[u8],
     alg: &str,
 ) -> Result<Vec<u8>, JweCryptoError> {
-    let key_str =
-        std::str::from_utf8(key_bytes).map_err(|e| JweCryptoError::InvalidKey(e.to_string()))?;
-    let private_key = RsaPrivateKey::from_pkcs1_pem(key_str)
-        .or_else(|_| RsaPrivateKey::from_pkcs8_pem(key_str))
-        .map_err(|e| JweCryptoError::InvalidKey(e.to_string()))?;
-
     let padding = match alg {
         "RSA-OAEP" => Oaep::new::<Sha1>(),
         "RSA-OAEP-256" => Oaep::new::<Sha256>(),
         other => return Err(JweCryptoError::UnsupportedAlgorithm(other.to_string())),
     };
 
-    private_key
-        .decrypt(padding, key_encrypted)
+    key.decrypt(padding, key_encrypted)
         .map_err(|e| JweCryptoError::DecryptionFailed(e.to_string()))
 }
 

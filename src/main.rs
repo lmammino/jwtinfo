@@ -35,9 +35,9 @@
 //! - Key management (`alg`): `dir`, `RSA-OAEP`, `RSA-OAEP-256`
 //! - Content encryption (`enc`): `A128GCM`, `A256GCM`
 //!
-//! For `dir`, the key file must contain the raw content-encryption key (CEK) bytes.
-//! For RSA-based algorithms, the key file must be a PEM-encoded private key in PKCS#1 or PKCS#8 format.
-//! At the moment only `.pem` keys are supported; additional formats will be added in the future.
+//! The key file can be an RSA private key (PEM/DER/JWK) or a symmetric key
+//! (raw 16/24/32-byte file or `oct` JWK). For `dir` it must contain the raw
+//! content-encryption key (CEK) bytes.
 //!
 //! ## Programmatic usage
 //!

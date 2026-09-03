@@ -35,16 +35,6 @@ sha1 = "0.10"
 sha2 = "0.10"
 aes-kw = { version = "0.3.1", default-features = false }
 biscuit = "0.8"
-p256 = { version = "0.14", default-features = false, features = [
-    "arithmetic",
-    "pem",
-    "std",
-] }
-p384 = { version = "0.14", default-features = false, features = [
-    "arithmetic",
-    "pem",
-    "std",
-] }
 thiserror = "2.0"
 winnow = "1.0.4"
 

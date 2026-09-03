@@ -13,7 +13,7 @@ jwtinfo is a Rust command-line tool and library for parsing JWT (JSON Web Tokens
 - **Token parsing**: `src/jw_parser.rs` - winnow-based parser that detects JWS (3 parts) vs JWE (5 parts)
 - **JWS types/logic**: `src/jws.rs` - `JwsToken`, `parse()`, `FromStr`
 - **JWE decryption**: `src/jwe.rs` + `src/jwe/jwe_handler/` - decryption and `DecryptedJwe`
-  - `key_loader.rs` - loads keys from PEM/DER/JWK/raw bytes into a `biscuit::jwk::JWK`
+  - `key_loader.rs` - loads keys from PEM/DER/JWK/raw bytes into a `LoadedKey` (symmetric bytes or RSA private key)
   - `decryptor.rs` - algorithm dispatch: RSA-OAEP via `rsa` crate, AES-KW via `aes-kw`, `dir`/GCMKW via `biscuit`
 - **Output formatting**: `src/jw_output.rs` - generic flag-driven rendering (`stringify`)
 - **Errors**: `src/jw_error.rs` - `ParseError`, `JwtParseError`, `JweError`

@@ -1,108 +1,139 @@
-use crate::jw_parser::get_base64;
-use base64::Engine as _;
-use biscuit::jwk::{
-    AlgorithmParameters, EllipticCurve, EllipticCurveKeyParameters, EllipticCurveKeyType, JWK,
-};
+use biscuit::jwk::{AlgorithmParameters, JWK};
 use biscuit::Empty;
-use p256::elliptic_curve::sec1::ToSec1Point;
 use rsa::pkcs1::DecodeRsaPrivateKey;
 use rsa::pkcs8::DecodePrivateKey;
-use rsa::traits::PrivateKeyParts;
-use rsa::traits::PublicKeyParts;
-use rsa::RsaPrivateKey;
-use serde_json::json;
+use rsa::{BigUint, RsaPrivateKey};
 
 use crate::jw_error::JweCryptoError;
 
-pub fn load_key(bytes: &[u8]) -> Result<JWK<Empty>, JweCryptoError> {
+/// Key material extracted from a key file, independent of its file format.
+#[derive(Debug)]
+pub enum LoadedKey {
+    /// Symmetric key bytes: a raw key file, or the `k` field of an `oct` JWK.
+    Symmetric(Vec<u8>),
+    /// An RSA private key loaded from a PEM/DER file or a JWK.
+    Rsa(Box<RsaPrivateKey>),
+}
+
+impl LoadedKey {
+    /// A short human-readable description, used in error messages.
+    fn describe(&self) -> &'static str {
+        match self {
+            LoadedKey::Symmetric(_) => "a symmetric key",
+            LoadedKey::Rsa(_) => "an RSA private key",
+        }
+    }
+
+    /// Unwraps the RSA private key, or errors if the key file holds another
+    /// kind of key.
+    pub fn into_rsa(self, alg: &str) -> Result<RsaPrivateKey, JweCryptoError> {
+        match self {
+            LoadedKey::Rsa(k) => Ok(*k),
+            other => Err(JweCryptoError::InvalidKey(format!(
+                "{alg} requires an RSA private key, but the key file contains {}",
+                other.describe()
+            ))),
+        }
+    }
+
+    /// Unwraps the symmetric key bytes, or errors if the key file holds
+    /// another kind of key.
+    pub fn into_symmetric(self, alg: &str) -> Result<Vec<u8>, JweCryptoError> {
+        match self {
+            LoadedKey::Symmetric(k) => Ok(k),
+            other => Err(JweCryptoError::InvalidKey(format!(
+                "{alg} requires a symmetric key, but the key file contains {}",
+                other.describe()
+            ))),
+        }
+    }
+}
+
+/// Loads a decryption key from raw file bytes, auto-detecting the format:
+///
+/// - PEM (RSA, PKCS#1 or PKCS#8)
+/// - DER (RSA, PKCS#1 or PKCS#8)
+/// - JWK (JSON Web Key, `kty` of `oct` or `RSA`)
+/// - raw bytes (a symmetric key of 16/24/32 bytes)
+pub fn load_key(bytes: &[u8]) -> Result<LoadedKey, JweCryptoError> {
     let text = String::from_utf8_lossy(bytes);
     let trimmed = text.trim();
 
     if trimmed.starts_with("-----BEGIN") {
         load_pem(trimmed)
     } else if trimmed.starts_with('{') {
-        serde_json::from_slice(bytes).map_err(|e| JweCryptoError::InvalidKey(e.to_string()))
-    } else if let Ok(jwk) = load_der(bytes) {
-        Ok(jwk)
+        load_jwk(trimmed)
+    } else if let Ok(key) = load_der(bytes) {
+        Ok(key)
     } else if matches!(bytes.len(), 16 | 24 | 32) {
-        Ok(JWK::new_octet_key(bytes, Empty {}))
+        Ok(LoadedKey::Symmetric(bytes.to_vec()))
     } else {
-        Err(JweCryptoError::InvalidKey(format!("unrecognized key format ({} bytes); expected PEM, DER, JWK, or a symmetric key of 16/24/32 bytes", bytes.len())))
+        Err(JweCryptoError::InvalidKey(format!(
+            "unrecognized key format ({} bytes); expected an RSA key (PEM/DER), a JWK, or a symmetric key of 16/24/32 bytes",
+            bytes.len()
+        )))
     }
 }
 
-fn load_pem(pem: &str) -> Result<JWK<Empty>, JweCryptoError> {
-    if let Ok(key) =
-        RsaPrivateKey::from_pkcs1_pem(pem).or_else(|_| RsaPrivateKey::from_pkcs8_pem(pem))
-    {
-        return rsa_to_jwk(&key);
-    }
-    if let Ok(key) = p256::SecretKey::from_pem(pem) {
-        return Ok(ec_p256_to_jwk(&key));
-    }
-    if let Ok(key) = p384::SecretKey::from_pem(pem) {
-        return Ok(ec_p384_to_jwk(&key));
-    }
-    Err(JweCryptoError::InvalidKey("unsupported PEM key".into()))
+fn load_pem(pem: &str) -> Result<LoadedKey, JweCryptoError> {
+    RsaPrivateKey::from_pkcs1_pem(pem)
+        .or_else(|_| RsaPrivateKey::from_pkcs8_pem(pem))
+        .map(|key| LoadedKey::Rsa(Box::new(key)))
+        .map_err(|_| {
+            JweCryptoError::InvalidKey(
+                "unsupported PEM key: expected an RSA private key (PKCS#1 or PKCS#8)".into(),
+            )
+        })
 }
 
-fn load_der(bytes: &[u8]) -> Result<JWK<Empty>, JweCryptoError> {
-    if let Ok(key) =
-        RsaPrivateKey::from_pkcs1_der(bytes).or_else(|_| RsaPrivateKey::from_pkcs8_der(bytes))
-    {
-        return rsa_to_jwk(&key);
-    }
-    if let Ok(key) = p256::SecretKey::from_der(bytes) {
-        return Ok(ec_p256_to_jwk(&key));
-    }
-    if let Ok(key) = p384::SecretKey::from_der(bytes) {
-        return Ok(ec_p384_to_jwk(&key));
-    }
-    Err(JweCryptoError::InvalidKey("unsupported DER key".into()))
+fn load_der(bytes: &[u8]) -> Result<LoadedKey, JweCryptoError> {
+    RsaPrivateKey::from_pkcs1_der(bytes)
+        .or_else(|_| RsaPrivateKey::from_pkcs8_der(bytes))
+        .map(|key| LoadedKey::Rsa(Box::new(key)))
+        .map_err(|_| {
+            JweCryptoError::InvalidKey(
+                "unsupported DER key: expected an RSA private key (PKCS#1 or PKCS#8)".into(),
+            )
+        })
 }
 
-fn rsa_to_jwk(key: &RsaPrivateKey) -> Result<JWK<Empty>, JweCryptoError> {
-    let b64 = |v: &rsa::BigUint| get_base64().encode(v.to_bytes_be());
-    let params = json!({
-            "kty": "RSA",
-            "n": b64(key.n()),
-            "e": b64(key.e()),
-            "d": b64(key.d()),
-        "additional": {}
-    });
+fn load_jwk(text: &str) -> Result<LoadedKey, JweCryptoError> {
+    let jwk: JWK<Empty> =
+        serde_json::from_str(text).map_err(|e| JweCryptoError::InvalidKey(e.to_string()))?;
 
-    serde_json::from_value::<JWK<Empty>>(params)
-        .map_err(|e| JweCryptoError::InvalidKey(e.to_string()))
-}
-
-fn ec_p256_to_jwk(key: &p256::SecretKey) -> JWK<Empty> {
-    let public = p256::PublicKey::from(key); // arithmetic
-    let point = public.to_sec1_point(false); // x || y non compresso
-    JWK {
-        common: Default::default(),
-        algorithm: AlgorithmParameters::EllipticCurve(EllipticCurveKeyParameters {
-            key_type: EllipticCurveKeyType::EC,
-            curve: EllipticCurve::P256,
-            x: point.x().unwrap().to_vec(),
-            y: point.y().unwrap().to_vec(),
-            d: Some(key.to_bytes().to_vec()),
-        }),
-        additional: Empty {},
+    match jwk.algorithm {
+        AlgorithmParameters::OctetKey(p) => Ok(LoadedKey::Symmetric(p.value)),
+        AlgorithmParameters::RSA(p) => {
+            // biscuit (num-bigint) and rsa (num-bigint-dig) use distinct
+            // BigUint types: convert through the big-endian byte representation.
+            let n = BigUint::from_bytes_be(&p.n.to_bytes_be());
+            let e = BigUint::from_bytes_be(&p.e.to_bytes_be());
+            let d = p
+                .d
+                .map(|d| BigUint::from_bytes_be(&d.to_bytes_be()))
+                .ok_or_else(|| {
+                    JweCryptoError::InvalidKey("RSA JWK is missing the private exponent 'd'".into())
+                })?;
+            let primes = match (p.p, p.q) {
+                (Some(prime_p), Some(prime_q)) => vec![
+                    BigUint::from_bytes_be(&prime_p.to_bytes_be()),
+                    BigUint::from_bytes_be(&prime_q.to_bytes_be()),
+                ],
+                _ => Vec::new(),
+            };
+            // Without primes, `rsa` recovers them from `d` (NIST SP 800-56B C.2).
+            RsaPrivateKey::from_components(n, e, d, primes)
+                .map(|key| LoadedKey::Rsa(Box::new(key)))
+                .map_err(|err| JweCryptoError::InvalidKey(format!("invalid RSA JWK: {err}")))
+        }
+        AlgorithmParameters::EllipticCurve(_) => Err(JweCryptoError::InvalidKey(
+            "unsupported JWK: EC keys cannot be used by any supported JWE algorithm".into(),
+        )),
+        AlgorithmParameters::OctetKeyPair(_) => Err(JweCryptoError::InvalidKey(
+            "unsupported JWK: OKP/EdDSA keys cannot be used by any supported JWE algorithm".into(),
+        )),
     }
 }
 
-fn ec_p384_to_jwk(key: &p384::SecretKey) -> JWK<Empty> {
-    let public = p384::PublicKey::from(key);
-    let point = public.to_sec1_point(false);
-    JWK {
-        common: Default::default(),
-        algorithm: AlgorithmParameters::EllipticCurve(EllipticCurveKeyParameters {
-            key_type: EllipticCurveKeyType::EC,
-            curve: EllipticCurve::P384,
-            x: point.x().unwrap().to_vec(),
-            y: point.y().unwrap().to_vec(),
-            d: Some(key.to_bytes().to_vec()),
-        }),
-        additional: Empty {},
-    }
-}
+#[cfg(test)]
+mod test;

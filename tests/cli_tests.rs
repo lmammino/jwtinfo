@@ -340,3 +340,33 @@ fn test_invalid_token_prints_error_once() {
         "the error must be reported exactly once, stderr was: {stderr}"
     );
 }
+
+#[test]
+fn test_wrong_key_type_reports_clear_error() {
+    // A symmetric key file cannot decrypt an RSA-OAEP-256 token: the error
+    // must say what the algorithm requires and what the file contains.
+    let mut cmd = cargo_bin_cmd!("jwtinfo");
+    let key_path = format!(
+        "{}/src/jwe/tests/fixtures/dir_cek.key",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    cmd.arg("--key")
+        .arg(key_path)
+        .arg(TEST_JWE)
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains(
+            "RSA-OAEP-256 requires an RSA private key, but the key file contains a symmetric key",
+        ));
+}
+
+#[test]
+fn test_jwe_without_key_shows_placeholder() {
+    let mut cmd = cargo_bin_cmd!("jwtinfo");
+    cmd.arg(TEST_JWE)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(
+            "Detected a JWE token but no private key was provided",
+        ));
+}

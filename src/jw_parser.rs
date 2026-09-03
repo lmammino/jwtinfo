@@ -21,7 +21,7 @@ static BASE64_ENGINE: OnceLock<engine::GeneralPurpose> = OnceLock::new();
 
 /// Returns the shared URL-safe, no-pad Base64 engine used to decode token segments.
 #[inline]
-pub fn get_base64() -> &'static engine::GeneralPurpose {
+fn get_base64() -> &'static engine::GeneralPurpose {
     BASE64_ENGINE
         .get_or_init(|| engine::GeneralPurpose::new(&alphabet::URL_SAFE, general_purpose::NO_PAD))
 }

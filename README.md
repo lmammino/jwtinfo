@@ -125,14 +125,17 @@ Not yet supported: `RSA1_5`, `ECDH-ES` (+KW variants), `PBES2-*` (password-based
 
 Supported key formats (auto-detected):
 
-- **PEM**: RSA (`PKCS#1` / `PKCS#8`) and EC `P-256`/`P-384` (`SEC1` / `PKCS#8`)
+- **PEM**: an RSA private key (`PKCS#1` or `PKCS#8`)
 - **DER**: the binary equivalents of the above
-- **JWK**: a JSON Web Key file (`kty` of `RSA`, `EC` or `oct`)
+- **JWK**: a JSON Web Key file (`kty` of `RSA` or `oct`)
 - **Raw bytes**: symmetric keys of 16/24/32 bytes (for `dir`, `AES-KW`, `GCMKW`)
 
-For `dir`, the key file must contain the raw content-encryption key (CEK) bytes.
-For RSA-based algorithms, the key file must be a PEM-encoded private key in PKCS#1 or PKCS#8 format.
-At the moment only `.pem` keys are supported; additional formats will be added in the future.
+Any format works for any algorithm: the key material is parsed once and matched
+against the token's `alg` (an RSA private key for `RSA-OAEP`/`RSA-OAEP-256`, a
+symmetric key for `dir`, `AES-KW` and `GCMKW`).
+For `dir`, the key file must contain the raw content-encryption key (CEK) bytes;
+for `AES-KW` and `GCMKW` it must contain the key-encryption key (KEK).
+EC and OKP (EdDSA) keys are not supported, as no supported JWE algorithm can use them.
 
 > [!NOTE]
 > **Encrypted [JWE](https://datatracker.ietf.org/doc/html/rfc7516) Tokens**: If you provide an encrypted JWE token without a key, `jwtinfo` will show a placeholder message indicating that a private key is required. Use `-K/--key` to decrypt it. The header can still be inspected normally using the `--header` flag.
