@@ -1,6 +1,16 @@
 use crate::jws::JwsToken;
 use serde_json::{json, to_string_pretty, Value};
-use std::error::Error;
+
+/// How a token should be rendered, mirroring the CLI display flags.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct DisplayOptions {
+    /// Show both the header and the payload (`--full`).
+    pub full: bool,
+    /// Pretty-print the JSON output (`--pretty`).
+    pub pretty: bool,
+    /// Show only the header(s) (`--header`).
+    pub header: bool,
+}
 
 /// A serializable piece of output. `Raw` is emitted verbatim (not quoted),
 /// `Json` is serialized as JSON.
@@ -10,26 +20,28 @@ pub enum Output {
 }
 
 impl Output {
-    fn to_string(&self, pretty: bool) -> Result<String, Box<dyn Error>> {
+    fn render(&self, opts: DisplayOptions) -> String {
         match self {
-            Output::Json(value) => render(value, pretty),
-            Output::Raw(s) => Ok(s.clone()),
+            Output::Json(value) => render(value, opts.pretty),
+            Output::Raw(s) => s.clone(),
         }
     }
 }
 
-fn render(value: &Value, pretty: bool) -> Result<String, Box<dyn Error>> {
+fn render(value: &Value, pretty: bool) -> String {
     if pretty {
-        to_string_pretty(value).map_err(Into::into)
+        // Serializing an in-memory `Value` cannot fail: it holds no custom
+        // types, non-string map keys or unbounded nesting from user input.
+        to_string_pretty(value).expect("serializing a serde_json::Value cannot fail")
     } else {
-        Ok(value.to_string())
+        value.to_string()
     }
 }
 
 /// Implemented by anything that can be rendered as a token body:
 /// a `JwsToken` (has header + claims) or a raw `String` (plaintext payload).
 pub trait TokenContent {
-    /// The primary content shown when neither `--header` nor `--full` is set.
+    /// The primary content shown when neither `header` nor `full` is set.
     fn primary(&self) -> Output;
     /// The full dump, including every available section.
     fn full(&self, jwe_header: Option<&Value>) -> Value;
@@ -71,21 +83,19 @@ impl TokenContent for String {
     }
 }
 
-/// Renders a token according to the requested display flags.
+/// Renders a token according to the display options.
 /// `jwe_header` is `Some` when the token has an outer JWE level.
 pub fn stringify<T: TokenContent>(
     jwe_header: Option<Value>,
     content: T,
-    full: bool,
-    pretty: bool,
-    header: bool,
-) -> Result<String, Box<dyn Error>> {
-    let output = if header {
+    opts: DisplayOptions,
+) -> String {
+    let output = if opts.header {
         Output::Json(content.header(jwe_header.as_ref()))
-    } else if full {
+    } else if opts.full {
         Output::Json(content.full(jwe_header.as_ref()))
     } else {
         content.primary()
     };
-    output.to_string(pretty)
+    output.render(opts)
 }

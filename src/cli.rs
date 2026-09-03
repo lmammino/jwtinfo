@@ -1,5 +1,5 @@
 use jwtinfo::{
-    jw_output::stringify,
+    jw_output::{stringify, DisplayOptions},
     jw_parser::{parse_token, JWToken},
     jws,
 };
@@ -48,9 +48,11 @@ fn main() -> Result<(), Box<dyn Error>> {
         ])
         .get_matches();
 
-    let full_flag = matches.get_flag("full");
-    let should_pretty_print = matches.get_flag("pretty");
-    let header_flag = matches.get_flag("header");
+    let opts = DisplayOptions {
+        full: matches.get_flag("full"),
+        pretty: matches.get_flag("pretty"),
+        header: matches.get_flag("header"),
+    };
     let mut token = matches.remove_one::<String>("token").unwrap();
     let mut buffer = String::new();
 
@@ -66,10 +68,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             if matches.get_one::<String>("key").is_some() {
                 eprintln!("Warning: the --key flag is only applicable to JWE tokens; ignoring it");
             }
-            println!(
-                "{}",
-                stringify(None, t, full_flag, should_pretty_print, header_flag)?
-            );
+            println!("{}", stringify(None, t, opts));
             Ok(())
         }
         Ok(JWToken::Jwe(jwe)) => {
@@ -82,21 +81,9 @@ fn main() -> Result<(), Box<dyn Error>> {
                 let jwe_header: Value = serde_json::from_str(&jwe.header)?;
                 let output = if decrypted.is_jwt_body {
                     let content = jws::parse(&decrypted.payload_string)?;
-                    stringify(
-                        Some(jwe_header),
-                        content,
-                        full_flag,
-                        should_pretty_print,
-                        header_flag,
-                    )?
+                    stringify(Some(jwe_header), content, opts)
                 } else {
-                    stringify(
-                        Some(jwe_header),
-                        decrypted.payload_string,
-                        full_flag,
-                        should_pretty_print,
-                        header_flag,
-                    )?
+                    stringify(Some(jwe_header), decrypted.payload_string, opts)
                 };
                 println!("{}", output);
                 Ok(())
@@ -104,10 +91,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 // No key: render the JWE header with a placeholder body.
                 let jwe_header: Value = serde_json::from_str(&jwe.header)?;
                 let t = jws::jwe_placeholder(jwe_header);
-                println!(
-                    "{}",
-                    stringify(None, t, full_flag, should_pretty_print, header_flag)?
-                );
+                println!("{}", stringify(None, t, opts));
                 Ok(())
             }
         }

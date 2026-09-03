@@ -95,7 +95,8 @@ The `JwsToken` struct in `src/jws.rs` contains:
 
 ### Output formatting (`src/jw_output.rs`)
 
-- `stringify<T: TokenContent>(jwe_header, content, full, pretty, header)` - single generic renderer
+- `stringify<T: TokenContent>(jwe_header, content, opts: DisplayOptions)` - single generic renderer
+- `DisplayOptions { full, pretty, header }` - mirrors the CLI display flags
 - `TokenContent` implemented for `JwsToken` and `String` (plaintext JWE payload)
 - `jwe_header: Option<Value>` - `Some` when there is an outer JWE level
 - `Output` enum distinguishes `Json` (serialized) from `Raw` (verbatim plaintext)
