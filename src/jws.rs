@@ -72,6 +72,18 @@ impl str::FromStr for JwsToken {
 /// Message shown as the body when a JWE token is provided without a key.
 const JWE_PLACEHOLDER: &str = "Detected a JWE token but no private key was provided. Please use the -K/--key flag to decrypt it.";
 
+/// Builds the placeholder shown when a JWE is inspected without a key.
+///
+/// The header is the (already decoded) JWE header; the body is a note
+/// explaining that a key is required to decrypt the payload.
+pub fn jwe_placeholder(header: Value) -> JwsToken {
+    JwsToken::new(
+        header,
+        Value::String(JWE_PLACEHOLDER.to_string()),
+        Vec::new(),
+    )
+}
+
 /// Parses a token from a string.
 ///
 /// For a JWS token, the header and body are decoded and the signature is kept
@@ -88,11 +100,7 @@ pub fn parse<T: AsRef<str>>(token: T) -> Result<JwsToken, JwtParseError> {
         JWToken::Jwe(jwe) => {
             let header: Value = serde_json::from_str(&jwe.header)
                 .map_err(|e| JwtParseError::InvalidHeader(ParseError::InvalidJson(e)))?;
-            Ok(JwsToken::new(
-                header,
-                Value::String(JWE_PLACEHOLDER.to_string()),
-                Vec::new(),
-            ))
+            Ok(jwe_placeholder(header))
         }
     }
 }

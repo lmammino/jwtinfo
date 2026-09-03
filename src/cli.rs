@@ -5,7 +5,7 @@ use jwtinfo::{
 };
 
 use clap::{Arg, ArgAction, Command};
-use jwtinfo::jwe::handle_jwe;
+use jwtinfo::jwe::decrypt_jwe;
 use serde_json::Value;
 use std::{
     error::Error,
@@ -78,7 +78,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 // outer JWE header together with the inner JWS; otherwise the
                 // flags apply to the JWE header and the raw plaintext.
                 let key = Some(fs::read(key_path)?);
-                let decrypted = handle_jwe(token, key)?;
+                let decrypted = decrypt_jwe(&jwe, &token, key)?;
                 let jwe_header: Value = serde_json::from_str(&jwe.header)?;
                 let output = if decrypted.is_jwt_body {
                     let content = jws::parse(&decrypted.payload_string)?;
@@ -102,7 +102,8 @@ fn main() -> Result<(), Box<dyn Error>> {
                 Ok(())
             } else {
                 // No key: render the JWE header with a placeholder body.
-                let t = jws::parse(&token)?;
+                let jwe_header: Value = serde_json::from_str(&jwe.header)?;
+                let t = jws::jwe_placeholder(jwe_header);
                 println!(
                     "{}",
                     stringify(None, t, full_flag, should_pretty_print, header_flag)?

@@ -5,7 +5,7 @@ use biscuit::Empty;
 
 use crate::jw_error::{JweCryptoError, JweError};
 use crate::jw_parser::parse_jwe;
-use crate::jwe::jwe_handler::{decryptor, key_loader, JweHeader};
+use crate::jwe::jwe_handler::{decryptor, key_loader, JweHeader, JweToken};
 
 /// The result of decrypting a JWE payload.
 #[derive(Debug)]
@@ -16,14 +16,32 @@ pub struct DecryptedJwe {
     pub is_jwt_body: bool,
 }
 
-/// Decrypts a JWE token using the provided key.
+/// Parses and decrypts a JWE token using the provided key.
+///
+/// Convenience entry point for callers holding the compact token as a
+/// string; use [`decrypt_jwe`] instead if the token has already been parsed
+/// (e.g. via [`crate::jw_parser::parse_jwe`]) to avoid parsing it twice.
+pub fn handle_jwe(token: &str, key: Option<Vec<u8>>) -> Result<DecryptedJwe, JweError> {
+    let jwe_token = parse_jwe(token)?;
+    decrypt_jwe(&jwe_token, token, key)
+}
+
+/// Decrypts an already-parsed JWE token using the provided key.
+///
+/// `token_str` is the original compact representation the token was parsed
+/// from: the Base64url-encoded protected header segment doubles as the
+/// authenticated associated data, and the biscuit decryptor re-parses the
+/// compact form itself.
 ///
 /// The key file is loaded once (see `key_loader::load_key` for the supported
 /// formats) and its material is matched against the token's `alg`:
 /// RSA private keys for `RSA-OAEP`/`RSA-OAEP-256`, symmetric keys for
 /// `dir`, AES-KW and GCMKW.
-pub fn handle_jwe(token: String, key: Option<Vec<u8>>) -> Result<DecryptedJwe, JweError> {
-    let jwe_token = parse_jwe(token.as_str())?;
+pub fn decrypt_jwe(
+    jwe_token: &JweToken,
+    token_str: &str,
+    key: Option<Vec<u8>>,
+) -> Result<DecryptedJwe, JweError> {
     let jwe_header: JweHeader = serde_json::from_str(&jwe_token.header)?;
     let is_jwt_body = jwe_header
         .cty
@@ -87,7 +105,7 @@ pub fn handle_jwe(token: String, key: Option<Vec<u8>>) -> Result<DecryptedJwe, J
             // symmetric keys (as an octet JWK).
             let kek = loaded.into_symmetric(alg)?;
             let jwk = JWK::new_octet_key(&kek, Empty {});
-            decryptor::decrypt_with_biscuit(&token, &jwk, alg, enc)?
+            decryptor::decrypt_with_biscuit(token_str, &jwk, alg, enc)?
         }
     };
 
