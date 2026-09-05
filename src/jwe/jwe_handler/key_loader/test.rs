@@ -1,5 +1,16 @@
 use super::*;
 
+#[test]
+fn raw_key_bytes_are_never_interpreted_as_text() {
+    for len in [16, 24, 32] {
+        for prefix in [b"{".as_slice(), b" \n{", b"-----BEGIN", &[0xff, 0xfe]] {
+            let mut key = vec![0x42; len];
+            key[..prefix.len()].copy_from_slice(prefix);
+            assert_eq!(load_key(&key).unwrap().into_symmetric("dir").unwrap(), key);
+        }
+    }
+}
+
 const RSA_PEM: &[u8] = include_bytes!("../../tests/fixtures/priv_simple_token.pem");
 const RSA_DER: &[u8] = include_bytes!("../../tests/fixtures/priv_simple_token.der");
 const RSA_JWK: &[u8] = include_bytes!("../../tests/fixtures/priv_simple_token.jwk");

@@ -142,6 +142,10 @@ Supported key formats (auto-detected):
 - **JWK**: a JSON Web Key file (`kty` of `RSA` or `oct`)
 - **Raw bytes**: symmetric keys of 16/24/32 bytes (for `dir`, `AES-KW`, `GCMKW`)
 
+Files of exactly 16, 24, or 32 bytes are always treated as raw symmetric
+keys, without trimming or interpreting their bytes as text. Longer files
+are checked for PEM, JWK, and DER encodings.
+
 Any format works for any algorithm: the key material is parsed once and matched
 against the token's `alg` (an RSA private key for `RSA-OAEP`/`RSA-OAEP-256`, a
 symmetric key for `dir`, `AES-KW` and `GCMKW`).
