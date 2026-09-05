@@ -2,9 +2,9 @@ use aes_gcm::aead::{Aead, Payload};
 use aes_gcm::{Aes128Gcm, Aes256Gcm, Key as AesKey, Nonce};
 use aes_kw::{KeyInit, KwAes128, KwAes192, KwAes256};
 use biscuit::jwa::{ContentEncryptionAlgorithm, KeyManagementAlgorithm};
-use biscuit::jwe::Compact;
+use biscuit::jwe::Compact as JweCompact;
 use biscuit::jwk::JWK;
-use biscuit::Empty;
+use biscuit::{Compact, Empty};
 use rsa::{Oaep, RsaPrivateKey};
 use sha1::Sha1;
 use sha2::Sha256;
@@ -134,12 +134,14 @@ where
 }
 
 pub fn decrypt_with_biscuit(
-    token_str: &str,
+    compact: &Compact,
     jwk: &JWK<Empty>,
     alg: &str,
     enc: &str,
 ) -> Result<Vec<u8>, JweCryptoError> {
-    let compact: Compact<Vec<u8>, Empty> = Compact::new_encrypted(token_str);
+    // Feed biscuit the parts we already hold (from the single split done at
+    // parse time) instead of a string it would re-split.
+    let compact = JweCompact::<Vec<u8>, Empty>::Encrypted(compact.clone());
     let cek_alg: KeyManagementAlgorithm = parse_alg(alg)?;
     let enc_alg: ContentEncryptionAlgorithm = parse_alg(enc)?;
     let decrypted = compact

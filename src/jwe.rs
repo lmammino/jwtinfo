@@ -100,7 +100,7 @@ pub fn decrypt_jwe(jwe_token: &JweToken, key: Option<Vec<u8>>) -> Result<Decrypt
             // symmetric keys (as an octet JWK).
             let kek = loaded.into_symmetric(alg)?;
             let jwk = JWK::new_octet_key(&kek, Empty {});
-            decryptor::decrypt_with_biscuit(jwe_token.raw(), &jwk, alg, enc)?
+            decryptor::decrypt_with_biscuit(jwe_token.compact(), &jwk, alg, enc)?
         }
     };
 

@@ -10,7 +10,7 @@ jwtinfo is a Rust command-line tool and library for parsing JWT (JSON Web Tokens
 
 - **Binary entry point**: `src/cli.rs` - CLI application using clap for argument parsing
 - **Library entry point**: `src/main.rs` - Exposes the public API
-- **Token parsing**: `src/jw_parser.rs` - winnow-based parser that detects JWS (3 parts) vs JWE (5 parts)
+- **Token parsing**: `src/jw_parser.rs` - winnow grammar that classifies JWS (3 segments) vs JWE (5 segments); biscuit (`Compact::decode`) splits the validated string once and decodes the parts
 - **JWS types/logic**: `src/jws.rs` - `JwsToken`, `parse()`, `FromStr`
 - **JWE decryption**: `src/jwe.rs` + `src/jwe/jwe_handler/` - decryption and `DecryptedJwe`
   - `key_loader.rs` - loads keys from PEM/DER/JWK/raw bytes into a `LoadedKey` (symmetric bytes or RSA private key)
@@ -91,7 +91,7 @@ The `JwsToken` struct in `src/jws.rs` contains:
 
 - `parse_token(&str) -> Result<JWToken, JwtParseError>` - entry point; an alt-of-shapes winnow grammar classifies the token as JWS (3 segments) or JWE (5 segments)
 - Leaf parsers: `b64url` (non-empty segment) and `b64url_or_empty` (unsecured-JWT signature, `dir` key)
-- `Shape` enum - grammar output; each variant holds the full token string, segments are re-derived by splitting
+- `Shape` enum - grammar output; each variant holds the full token string, biscuit then splits it once (`Compact::decode`) and base64url-decodes the parts
 - `classify(&str)` - fallback error mapping (`InvalidSegment` vs `WrongPartCount`) when both shapes fail
 - `JWToken` enum: `Jws(JwsToken)` | `Jwe(JweToken)`
 - `parse_jwe(&str) -> Result<JweToken, JwtParseError>` - convenience wrapper

@@ -2,10 +2,14 @@ use std::string;
 use thiserror::Error;
 
 /// Low-level decoding errors (Base64, UTF-8, JSON).
+///
+/// Base64url decoding is delegated to biscuit, so the base64 cause is
+/// carried as a pre-formatted message (e.g. `"invalid length at 16"`)
+/// rather than a typed error.
 #[derive(Debug, Error)]
 pub enum ParseError {
     #[error("Base64 error, {0}")]
-    InvalidBase64(#[from] base64::DecodeError),
+    InvalidBase64(String),
     #[error("UTF8 error, {0}")]
     InvalidUtf8(#[from] string::FromUtf8Error),
     #[error("JSON error, {0}")]

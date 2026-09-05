@@ -1,6 +1,9 @@
+use biscuit::Compact;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
+
+use crate::jw_error::JwtParseError;
 
 /// The protected JWE header, deserialized from the token's first segment.
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
@@ -18,12 +21,17 @@ pub struct JweHeader {
 }
 
 /// A parsed (but not yet decrypted) JWE token.
+///
+/// The single source of truth is biscuit's [`Compact`]: a one-shot split of
+/// the raw token string into its five base64url segments. Every part the
+/// decryptors need is derived from it — the decoded segments for the manual
+/// paths (RSA-OAEP, AES-KW), the raw protected-header segment as the AAD,
+/// and the parts themselves for the biscuit path (`dir`/GCMKW), which
+/// consumes them without re-parsing any string.
 #[derive(Debug, PartialEq, Eq)]
 pub struct JweToken {
-    /// The full compact serialization, kept verbatim: the biscuit decryptor
-    /// re-parses it for `dir`/GCMKW, and the raw protected-header segment
-    /// (its first segment) doubles as the authenticated associated data.
-    raw: String,
+    /// biscuit's split of the compact serialization: the five raw segments.
+    compact: Compact,
     /// The Base64url-decoded protected header, as a JSON string.
     pub header: String,
     /// The encrypted content-encryption key (empty for `dir`).
@@ -37,37 +45,52 @@ pub struct JweToken {
 }
 
 impl JweToken {
-    /// Builds a `JweToken` from its raw compact form and decoded parts.
-    pub fn new(
-        raw: String,
-        header: String,
-        key_encrypted: Vec<u8>,
-        iv: Vec<u8>,
-        ciphertext: Vec<u8>,
-        tag: Vec<u8>,
-    ) -> Self {
-        Self {
-            raw,
+    /// Instantiates a `JweToken` from the raw compact string alone.
+    ///
+    /// The input must be a grammar-validated 5-segment JWE (see
+    /// [`crate::jw_parser::parse_token`]): biscuit splits it once and every
+    /// part is derived from that split.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`JwtParseError::InvalidSegment`] when a segment cannot be
+    /// base64url-decoded or the header is not valid UTF-8.
+    pub fn new(raw: &str) -> Result<Self, JwtParseError> {
+        let compact = Compact::decode(raw);
+        let invalid = |_| JwtParseError::InvalidSegment;
+        let header = String::from_utf8(compact.part::<Vec<u8>>(0).map_err(invalid)?)
+            .map_err(|_| JwtParseError::InvalidSegment)?;
+        let segment = |index: usize| compact.part::<Vec<u8>>(index).map_err(invalid);
+        Ok(Self {
             header,
-            key_encrypted,
-            iv,
-            ciphertext,
-            tag,
-        }
+            key_encrypted: segment(1)?,
+            iv: segment(2)?,
+            ciphertext: segment(3)?,
+            tag: segment(4)?,
+            compact,
+        })
     }
 
-    /// The full compact serialization the token was parsed from.
-    pub fn raw(&self) -> &str {
-        &self.raw
+    /// The full compact serialization the token was parsed from, re-derived
+    /// from the raw segments.
+    pub fn raw(&self) -> String {
+        self.compact.encode()
     }
 
     /// The authenticated associated data: the raw Base64url-encoded protected
     /// header segment, i.e. the first segment of the compact form
     /// (RFC 7516 §5.1, step 14).
     pub fn aad(&self) -> &[u8] {
-        self.raw.split('.').next().unwrap_or("").as_bytes()
+        self.compact.parts[0].as_ref()
+    }
+
+    /// biscuit's split of the compact form, for the decryptors that consume
+    /// the parts directly (no string re-parsing).
+    pub(crate) fn compact(&self) -> &Compact {
+        &self.compact
     }
 }
+
 impl JweHeader {
     /// `true` when the GCMKW `iv`/`tag` parameters are carried as base64url
     /// strings, as required by RFC 7518 §4.7 (most JOSE libraries), rather

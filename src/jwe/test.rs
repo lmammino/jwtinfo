@@ -47,7 +47,7 @@ fn assert_decrypt_jwe_accepts_pre_parsed_token() {
     let decrypted = decrypt_jwe(&parsed, Some(EXAMPLE_JWE_KEY.to_vec())).unwrap();
     assert_eq!(decrypted.payload_string, "This is a super secret message!");
 
-    // And the dir fixture exercises the biscuit path through raw():
+    // And the dir fixture exercises the biscuit path through the shared parts:
     let parsed = parse_jwe(DIR_JWE.trim()).unwrap();
     let decrypted = decrypt_jwe(&parsed, Some(DIR_JWE_CEK.to_vec())).unwrap();
     assert_eq!(decrypted.payload_string, "super secret dir payload");

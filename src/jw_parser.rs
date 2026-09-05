@@ -1,10 +1,5 @@
-use base64::{
-    alphabet,
-    engine::{self, general_purpose},
-    Engine as _,
-};
+use biscuit::Compact;
 use serde_json::Value;
-use std::sync::OnceLock;
 use winnow::{
     combinator::{alt, eof, terminated},
     error::{StrContext, StrContextValue},
@@ -15,24 +10,6 @@ use winnow::{
 use crate::jw_error::{JwtParseError, ParseError};
 use crate::jwe::jwe_handler::JweToken;
 use crate::jws::JwsToken;
-
-/// Lazily-initialized URL-safe (no-pad) Base64 engine shared across the crate.
-static BASE64_ENGINE: OnceLock<engine::GeneralPurpose> = OnceLock::new();
-
-/// Returns the shared URL-safe, no-pad Base64 engine used to decode token segments.
-#[inline]
-fn get_base64() -> &'static engine::GeneralPurpose {
-    BASE64_ENGINE
-        .get_or_init(|| engine::GeneralPurpose::new(&alphabet::URL_SAFE, general_purpose::NO_PAD))
-}
-
-/// Decodes a Base64url segment into a UTF-8 string.
-#[doc(hidden)]
-fn parse_base64_string(string_to_parse: &str) -> Result<String, ParseError> {
-    let bytes = get_base64().decode(string_to_parse)?;
-    let string = String::from_utf8(bytes)?;
-    Ok(string)
-}
 
 /// The result of parsing a token: either a JWS (3 parts) or a JWE (5 parts).
 #[derive(Debug, PartialEq, Eq)]
@@ -71,9 +48,8 @@ fn b64url_or_empty<'s>(input: &mut &'s str) -> winnow::Result<&'s str> {
 
 /// The syntactic shape of a token, mirroring the RFC compact-serialization
 /// ABNF. The variant payload is the *whole* token string: the grammar's job
-/// is validation and classification, and segment boundaries are re-derived
-/// by splitting, which is infallible because the grammar already validated
-/// the exact dot arrangement.
+/// is validation and classification, and the segment boundaries are left to
+/// biscuit (`Compact::decode`), which splits the validated string once.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Shape<'s> {
     /// A 3-segment JWS (header.payload.signature).
@@ -128,36 +104,25 @@ fn classify(raw: &str) -> JwtParseError {
     }
 }
 
-/// Splits a grammar-validated 3-segment token into its segments.
-fn split3(raw: &str) -> [&str; 3] {
-    let mut parts = raw.split('.');
-    // Infallible: the grammar guarantees exactly two dots.
-    let mut next = || parts.next().expect("grammar-validated token");
-    [next(), next(), next()]
-}
-
-/// Splits a grammar-validated 5-segment token into its segments.
-fn split5(raw: &str) -> [&str; 5] {
-    let mut parts = raw.split('.');
-    // Infallible: the grammar guarantees exactly four dots.
-    let mut next = || parts.next().expect("grammar-validated token");
-    [next(), next(), next(), next(), next()]
-}
-
-/// Decodes a Base64url-encoded JSON value.
-fn decode_json(b64: &str) -> Result<Value, ParseError> {
-    let s = parse_base64_string(b64)?;
+/// Decodes one part of a grammar-validated compact token into a JSON value:
+/// biscuit base64url-decodes the segment, we handle UTF-8 and JSON.
+fn decode_json_part(compact: &Compact, index: usize) -> Result<Value, ParseError> {
+    let bytes = compact
+        .part::<Vec<u8>>(index)
+        .map_err(|e| ParseError::InvalidBase64(e.to_string()))?;
+    let s = String::from_utf8(bytes)?;
     Ok(serde_json::from_str(&s)?)
 }
 
-/// Decodes the segments of a grammar-validated JWS into a [`JwsToken`].
+/// Decodes a grammar-validated JWS into a [`JwsToken`], using biscuit to
+/// split the compact form and base64url-decode its parts.
 fn decode_jws(raw: &str) -> Result<JWToken, JwtParseError> {
-    let [header, body, signature] = split3(raw);
-    let header = decode_json(header).map_err(JwtParseError::InvalidHeader)?;
-    let body = decode_json(body).map_err(JwtParseError::InvalidBody)?;
-    let signature = get_base64()
-        .decode(signature)
-        .map_err(|e| JwtParseError::InvalidSignature(ParseError::InvalidBase64(e)))?;
+    let compact = Compact::decode(raw);
+    let header = decode_json_part(&compact, 0).map_err(JwtParseError::InvalidHeader)?;
+    let body = decode_json_part(&compact, 1).map_err(JwtParseError::InvalidBody)?;
+    let signature = compact
+        .part::<Vec<u8>>(2)
+        .map_err(|e| JwtParseError::InvalidSignature(ParseError::InvalidBase64(e.to_string())))?;
     Ok(JWToken::Jws(JwsToken {
         header,
         body,
@@ -165,31 +130,18 @@ fn decode_jws(raw: &str) -> Result<JWToken, JwtParseError> {
     }))
 }
 
-/// Decodes the segments of a grammar-validated JWE into a [`JweToken`].
+/// Decodes a grammar-validated JWE into a [`JweToken`]: `JweToken::new`
+/// derives every part from the raw string, with biscuit doing the split.
 fn decode_jwe(raw: &str) -> Result<JWToken, JwtParseError> {
-    let [b64_header, b64_key, b64_iv, b64_cipher, b64_tag] = split5(raw);
-    let header = parse_base64_string(b64_header).map_err(|_| JwtParseError::InvalidSegment)?;
-    let dec = |s: &str| {
-        get_base64()
-            .decode(s)
-            .map_err(|_| JwtParseError::InvalidSegment)
-    };
-    Ok(JWToken::Jwe(JweToken::new(
-        raw.to_string(),
-        header,
-        dec(b64_key)?,
-        dec(b64_iv)?,
-        dec(b64_cipher)?,
-        dec(b64_tag)?,
-    )))
+    Ok(JWToken::Jwe(JweToken::new(raw)?))
 }
 
 /// Parses a JWS or JWE token from a string.
 ///
 /// The token is validated and classified by a grammar mirroring the RFC
 /// compact-serialization ABNF — an alternation of the 3-segment JWS shape
-/// and the 5-segment JWE shape, anchored at the end of input — and the
-/// segments are then decoded.
+/// and the 5-segment JWE shape, anchored at the end of input — and biscuit
+/// then splits the validated string once and decodes its parts.
 pub fn parse_token(token_str: &str) -> Result<JWToken, JwtParseError> {
     let raw = token_str.trim();
     let mut input = raw;
