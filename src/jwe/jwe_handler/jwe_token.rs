@@ -27,7 +27,10 @@ pub struct JweHeader {
 /// decryptors need is derived from it — the decoded segments for the manual
 /// paths (RSA-OAEP, AES-KW), the raw protected-header segment as the AAD,
 /// and the parts themselves for the biscuit path (`dir`/GCMKW), which
-/// consumes them without re-parsing any string.
+/// consumes them without re-parsing any string. On that biscuit path the
+/// segments are base64url-decoded twice — once eagerly here, once inside
+/// biscuit's decrypt — the price of delegating that path; the token string
+/// itself is still split exactly once.
 #[derive(Debug, PartialEq, Eq)]
 pub struct JweToken {
     /// biscuit's split of the compact serialization: the five raw segments.
@@ -91,6 +94,9 @@ impl JweToken {
     /// The authenticated associated data: the raw Base64url-encoded protected
     /// header segment, i.e. the first segment of the compact form
     /// (RFC 7516 §5.1, step 14).
+    ///
+    /// Indexing is infallible: `new` only returns after `part(4)` succeeds,
+    /// so every live `JweToken` holds exactly five parts.
     pub fn aad(&self) -> &[u8] {
         self.compact.parts[0].as_ref()
     }

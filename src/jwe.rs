@@ -28,9 +28,10 @@ pub fn handle_jwe(token: &str, key: Option<Vec<u8>>) -> Result<DecryptedJwe, Jwe
 
 /// Decrypts an already-parsed JWE token using the provided key.
 ///
-/// The token carries everything the decryptors need: its raw compact form
-/// (re-parsed by biscuit for `dir`/GCMKW and used to derive the AAD) and the
-/// decoded segments (consumed by the RSA-OAEP and AES-KW paths).
+/// The token carries everything the decryptors need: its compact form,
+/// held as biscuit's split parts (fed directly to the `dir`/GCMKW
+/// decryptor — no string is re-parsed — and used to derive the AAD), and
+/// the decoded segments (consumed by the RSA-OAEP and AES-KW paths).
 ///
 /// The key file is loaded once (see `key_loader::load_key` for the supported
 /// formats) and its material is matched against the token's `alg`:

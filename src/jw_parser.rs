@@ -35,8 +35,8 @@ fn b64url<'s>(input: &mut &'s str) -> winnow::Result<&'s str> {
 }
 
 /// A Base64url segment that may be empty. Required for the unsecured-JWT
-/// signature (`alg: none`, RFC 7518 §3) and the `dir` encrypted key
-/// (RFC 7516 §4.5); also used for the JWE iv/ciphertext/tag segments, which
+/// signature (`alg: none`, RFC 7518 §3.6) and the `dir` encrypted key
+/// (RFC 7518 §4.5); also used for the JWE iv/ciphertext/tag segments, which
 /// are validated by the content-encryption layer rather than the grammar.
 fn b64url_or_empty<'s>(input: &mut &'s str) -> winnow::Result<&'s str> {
     take_while(0.., is_base64url_char)
@@ -59,7 +59,7 @@ enum Shape<'s> {
 }
 
 /// `JWS-Compact = BASE64URL(header) '.' BASE64URL(payload) '.' BASE64URL(signature)`
-/// where the signature segment is empty for unsecured JWTs (RFC 7518 §3).
+/// where the signature segment is empty for unsecured JWTs (RFC 7518 §3.6).
 fn jws_shape<'s>(input: &mut &'s str) -> winnow::Result<Shape<'s>> {
     (b64url, ".", b64url_or_empty, ".", b64url_or_empty)
         .take()
@@ -69,7 +69,7 @@ fn jws_shape<'s>(input: &mut &'s str) -> winnow::Result<Shape<'s>> {
 }
 
 /// `JWE-Compact = BASE64URL(header) '.' BASE64URL(encrypted key) '.' ...`
-/// where the encrypted-key segment is empty for `dir` (RFC 7516 §4.5).
+/// where the encrypted-key segment is empty for `dir` (RFC 7518 §4.5).
 fn jwe_shape<'s>(input: &mut &'s str) -> winnow::Result<Shape<'s>> {
     (
         b64url,

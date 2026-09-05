@@ -85,7 +85,7 @@ fn empty_input_is_rejected() {
 
 #[test]
 fn empty_signature_segment_is_allowed() {
-    // Unsecured JWT (RFC 7518 §3, `alg: none`): empty signature segment.
+    // Unsecured JWT (RFC 7518 §3.6, `alg: none`): empty signature segment.
     let token = "eyJhbGciOiJub25lIn0.eyJmb28iOiJiYXIifQ.";
     let JWToken::Jws(t) = parse_token(token).unwrap() else {
         panic!("expected Jws")
@@ -96,7 +96,7 @@ fn empty_signature_segment_is_allowed() {
 
 #[test]
 fn empty_encrypted_key_segment_is_allowed() {
-    // `dir` JWE (RFC 7516 §4.5): the encrypted key is an empty octet sequence.
+    // `dir` JWE (RFC 7518 §4.5): the encrypted key is an empty octet sequence.
     let token = "eyJhbGciOiJkaXIiLCJlbmMiOiJBMTI4R0NNIn0..VvWKimYzMS9Z9MkX.uO-BF7wDC-g6L5h4DUa1iim2cTCvCFDW._cE8ch4ES_mGc3YtpnEWJA";
     let JWToken::Jwe(j) = parse_token(token).unwrap() else {
         panic!("expected Jwe")
@@ -170,8 +170,8 @@ fn jwe_token_carries_raw_form_and_derives_aad() {
     let JWToken::Jwe(j) = parse_token(token).unwrap() else {
         panic!("expected Jwe")
     };
-    // The raw compact form is kept verbatim for decryptors that re-parse it
-    // (biscuit), and the AAD is derived from its first segment.
+    // The compact form round-trips verbatim (the empty `dir` key segment
+    // included), and the AAD is derived from its first segment.
     assert_eq!(j.raw(), token);
     assert_eq!(j.aad(), token.split('.').next().unwrap().as_bytes());
 }
