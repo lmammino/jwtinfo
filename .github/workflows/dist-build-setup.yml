@@ -3,4 +3,4 @@
   run: |
     apt-get update
     apt-get install --yes python3-pip
-    pip3 install --upgrade git+https://github.com/rust-cross/cargo-xwin.git
+    pip3 install --break-system-packages --upgrade git+https://github.com/rust-cross/cargo-xwin.git
