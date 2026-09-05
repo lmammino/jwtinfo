@@ -2,7 +2,7 @@
 #[allow(deprecated)]
 use jwtinfo::{
     jw_error::{JwtParseError, ParseError},
-    jw_output::{stringify, DisplayOptions},
+    jw_output::{stringify, DisplayOptions, TokenOutput},
     jw_parser::{parse_token, JWToken},
     jws,
 };
@@ -83,41 +83,47 @@ fn run() -> Result<(), Box<dyn Error>> {
         token = (buffer.trim()).to_string();
     }
 
-    match parse_token(&token) {
-        Ok(JWToken::Jws(t)) => {
+    let output = match parse_token(&token)? {
+        JWToken::Jws(t) => {
             // The --key flag is only meaningful for JWE tokens.
             if matches.get_one::<String>("key").is_some() {
                 eprintln!("Warning: the --key flag is only applicable to JWE tokens; ignoring it");
             }
-            println!("{}", stringify(None, t, opts));
-            Ok(())
+            stringify(TokenOutput::Jws(&t), opts)
         }
-        Ok(JWToken::Jwe(jwe)) => {
+        JWToken::Jwe(jwe) => {
+            let header: Value = serde_json::from_str(jwe.header())
+                .map_err(|e| JwtParseError::InvalidHeader(ParseError::InvalidJson(e)))?;
             if let Some(key_path) = matches.get_one::<String>("key") {
                 // Decrypt and render. If the payload is a nested JWT we show the
                 // outer JWE header together with the inner JWS; otherwise the
                 // flags apply to the JWE header and the raw plaintext.
                 let key = Some(fs::read(key_path)?);
                 let decrypted = decrypt_jwe(&jwe, key)?;
-                let jwe_header: Value = serde_json::from_str(jwe.header())
-                    .map_err(|e| JwtParseError::InvalidHeader(ParseError::InvalidJson(e)))?;
-                let output = if decrypted.is_jwt_body {
+                if decrypted.is_jwt_body {
                     let content = jws::parse(&decrypted.payload_string)?;
-                    stringify(Some(jwe_header), content, opts)
+                    stringify(
+                        TokenOutput::NestedJws {
+                            header: &header,
+                            token: &content,
+                        },
+                        opts,
+                    )
                 } else {
-                    stringify(Some(jwe_header), decrypted.payload_string, opts)
-                };
-                println!("{}", output);
-                Ok(())
+                    stringify(
+                        TokenOutput::DecryptedJwe {
+                            header: &header,
+                            payload: &decrypted.payload_string,
+                        },
+                        opts,
+                    )
+                }
             } else {
                 // No key: render the JWE header with a placeholder body.
-                let jwe_header: Value = serde_json::from_str(jwe.header())
-                    .map_err(|e| JwtParseError::InvalidHeader(ParseError::InvalidJson(e)))?;
-                let t = jws::jwe_placeholder(jwe_header);
-                println!("{}", stringify(None, t, opts));
-                Ok(())
+                stringify(TokenOutput::EncryptedJwe { header: &header }, opts)
             }
         }
-        Err(e) => Err(e.into()),
-    }
+    };
+    println!("{}", output);
+    Ok(())
 }

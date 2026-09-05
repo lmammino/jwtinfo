@@ -79,4 +79,6 @@ pub enum JwtParseError {
     InvalidSegment,
     #[error("Expected a JWE token (5 parts), but the input is a JWS (3 parts)")]
     NotAJwe,
+    #[error("Expected a JWS token (3 parts), but the input is a JWE (5 parts)")]
+    NotAJws,
 }

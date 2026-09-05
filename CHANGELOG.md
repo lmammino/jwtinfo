@@ -48,6 +48,12 @@ changes for library users.
 
 ### Breaking (library API)
 
+- `jws::parse` and `JwsToken::from_str` reject JWE inputs with `NotAJws`.
+  Use `jw_parser::parse_token` for either type. `jwe_placeholder` is removed;
+  encrypted placeholders are rendered by `TokenOutput::EncryptedJwe`.
+- `jw_output::stringify` takes `(TokenOutput, DisplayOptions)`. The explicit
+  borrowed output enum replaces `TokenContent` and `Output`.
+
 - The `jwt` module is renamed `jws`; `jwt::Token` is now `jws::JwsToken`.
 - New entry point `jw_parser::parse_token` returns the `JWToken` enum
   (`Jws(JwsToken)` | `Jwe(JweToken)`). `jws::parse` and

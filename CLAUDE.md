@@ -15,7 +15,7 @@ jwtinfo is a Rust command-line tool and library for parsing JWT (JSON Web Tokens
 - **JWE decryption**: `src/jwe.rs` + `src/jwe/jwe_handler/` - decryption and `DecryptedJwe`
   - `key_loader.rs` - loads keys from PEM/DER/JWK/raw bytes into a `LoadedKey` (symmetric bytes or RSA private key)
   - `decryptor.rs` - algorithm dispatch: RSA-OAEP via `rsa` crate, AES-KW via `aes-kw`, `dir`/GCMKW via `biscuit`
-- **Output formatting**: `src/jw_output.rs` - generic flag-driven rendering (`stringify`)
+- **Output formatting**: `src/jw_output.rs` - flag-driven rendering of explicit `TokenOutput` variants
 - **Errors**: `src/jw_error.rs` - `ParseError`, `JwtParseError`, `JweError`
 - **Unit tests**: `src/jws/test.rs`, `src/jwe/test.rs`, `src/jw_parser/test.rs`
 
@@ -98,11 +98,10 @@ The `JwsToken` struct in `src/jws.rs` contains:
 
 ### Output formatting (`src/jw_output.rs`)
 
-- `stringify<T: TokenContent>(jwe_header, content, opts: DisplayOptions)` - single generic renderer
+- `stringify(content: TokenOutput, opts: DisplayOptions)` - shared renderer
 - `DisplayOptions { full, pretty, header }` - mirrors the CLI display flags
-- `TokenContent` implemented for `JwsToken` and `String` (plaintext JWE payload)
-- `jwe_header: Option<Value>` - `Some` when there is an outer JWE level
-- `Output` enum distinguishes `Json` (serialized) from `Raw` (verbatim plaintext)
+- `TokenOutput` distinguishes JWS, encrypted JWE, decrypted plaintext JWE, and nested JWS; its variants borrow their content
+- `jws::parse` rejects JWE inputs; the encrypted placeholder belongs to output formatting only
 
 ### Error Handling
 
