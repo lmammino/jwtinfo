@@ -1,6 +1,7 @@
 // The CLI is the intended consumer of the library API.
 #[allow(deprecated)]
 use jwtinfo::{
+    jw_error::{JwtParseError, ParseError},
     jw_output::{stringify, DisplayOptions},
     jw_parser::{parse_token, JWToken},
     jws,
@@ -98,7 +99,8 @@ fn run() -> Result<(), Box<dyn Error>> {
                 // flags apply to the JWE header and the raw plaintext.
                 let key = Some(fs::read(key_path)?);
                 let decrypted = decrypt_jwe(&jwe, key)?;
-                let jwe_header: Value = serde_json::from_str(&jwe.header)?;
+                let jwe_header: Value = serde_json::from_str(&jwe.header)
+                    .map_err(|e| JwtParseError::InvalidHeader(ParseError::InvalidJson(e)))?;
                 let output = if decrypted.is_jwt_body {
                     let content = jws::parse(&decrypted.payload_string)?;
                     stringify(Some(jwe_header), content, opts)
@@ -109,7 +111,8 @@ fn run() -> Result<(), Box<dyn Error>> {
                 Ok(())
             } else {
                 // No key: render the JWE header with a placeholder body.
-                let jwe_header: Value = serde_json::from_str(&jwe.header)?;
+                let jwe_header: Value = serde_json::from_str(&jwe.header)
+                    .map_err(|e| JwtParseError::InvalidHeader(ParseError::InvalidJson(e)))?;
                 let t = jws::jwe_placeholder(jwe_header);
                 println!("{}", stringify(None, t, opts));
                 Ok(())

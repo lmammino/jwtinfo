@@ -21,7 +21,7 @@ pub enum ParseError {
 pub enum JweError {
     #[error("{0}")]
     Parse(#[from] JwtParseError),
-    #[error("not serialized error")]
+    #[error("JSON error: {0}")]
     Json(#[from] serde_json::Error),
     #[error("Invalid UTF-8 string: {0}")]
     InvalidUtf8(#[from] string::FromUtf8Error),

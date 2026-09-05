@@ -3,7 +3,7 @@ pub mod jwe_handler;
 use biscuit::jwk::JWK;
 use biscuit::Empty;
 
-use crate::jw_error::{JweCryptoError, JweError};
+use crate::jw_error::{JweCryptoError, JweError, JwtParseError, ParseError};
 #[allow(deprecated)]
 use crate::jw_parser::parse_jwe;
 use crate::jwe::jwe_handler::{decryptor, key_loader, JweHeader, JweToken};
@@ -50,7 +50,8 @@ pub fn handle_jwe(token: &str, key: Option<Vec<u8>>) -> Result<DecryptedJwe, Jwe
             for library JWT parsing, use biscuit or some other JWT library (check https://jwt.io for suggestions)"
 )]
 pub fn decrypt_jwe(jwe_token: &JweToken, key: Option<Vec<u8>>) -> Result<DecryptedJwe, JweError> {
-    let jwe_header: JweHeader = serde_json::from_str(&jwe_token.header)?;
+    let jwe_header: JweHeader = serde_json::from_str(&jwe_token.header)
+        .map_err(|e| JwtParseError::InvalidHeader(ParseError::InvalidJson(e)))?;
     let is_jwt_body = jwe_header
         .cty
         .as_deref()
