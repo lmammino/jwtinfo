@@ -21,7 +21,7 @@ jwtinfo is a Rust command-line tool and library for parsing JWT (JSON Web Tokens
 
 The project follows a dual structure:
 
-- Library crate: Provides `jws::parse()` function and `JwsToken` struct
+- Library crate: Provides `jws::parse()` function and `JwsToken` struct (the parsing API is deprecated since 0.7.0 and in maintenance mode; see CHANGELOG.md — jwtinfo is repositioning as a CLI tool)
 - Binary crate: CLI wrapper that uses the library for command-line interaction
 
 ## Common Development Commands

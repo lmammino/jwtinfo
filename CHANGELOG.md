@@ -37,6 +37,16 @@ changes for library users.
 - Empty signature segments (unsecured JWTs, `alg: none`) and empty
   encrypted-key segments (`dir` JWEs) parse correctly.
 
+### Deprecated
+
+- The parsing library API: `jws::parse`, `jw_parser::parse_token`,
+  `jw_parser::parse_jwe`, `jwe::handle_jwe`, `jwe::decrypt_jwe`. jwtinfo is
+  being repositioned as a CLI tool: the API remains functional but is in
+  maintenance mode, will not gain new features, and may be removed in a
+  future release. For library JWT parsing, use
+  [biscuit](https://crates.io/crates/biscuit) or some other JWT library
+  ([check jwt.io for suggestions](https://jwt.io/libraries)).
+
 ### Breaking (library API)
 
 - The `jwt` module is renamed `jws`; `jwt::Token` is now `jws::JwsToken`.

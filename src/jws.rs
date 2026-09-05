@@ -3,6 +3,14 @@
 //! `jws` is a collection of utilities to parse JWSs (Json Web Signatures),
 //! the three-part signed JWTs (header.payload.signature)
 //!
+//! > **Deprecation notice (0.7.0):** jwtinfo is being repositioned as a CLI
+//! > tool and this parsing API is deprecated and in maintenance mode. It
+//! > remains functional, but it will not gain new features and may be
+//! > removed in a future release. For library JWT parsing, use
+//! > [`biscuit`](https://crates.io/crates/biscuit) or some other JWT
+//! > library ([check jwt.io for
+//! > suggestions](https://jwt.io/libraries)).
+//!
 //! ## Examples
 //!
 //! To parse a given JWT as a string:
@@ -36,6 +44,8 @@ use std::str;
 
 use crate::jw_error::JwtParseError;
 use crate::jw_error::ParseError;
+// The CLI-oriented internals below consume the deprecated parsing API.
+#[allow(deprecated)]
 use crate::jw_parser::parse_token;
 use crate::jw_parser::JWToken;
 
@@ -64,6 +74,9 @@ impl JwsToken {
 impl str::FromStr for JwsToken {
     type Err = JwtParseError;
 
+    // Delegates to the deprecated `parse` to keep the trait working for
+    // existing callers; the trait impl itself cannot carry a deprecation.
+    #[allow(deprecated)]
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         parse(s)
     }
@@ -93,6 +106,12 @@ pub fn jwe_placeholder(header: Value) -> JwsToken {
 /// # Errors
 ///
 /// This function will return a `JwtParseError` if the token cannot be successfully parsed.
+#[deprecated(
+    since = "0.7.0",
+    note = "jwtinfo is being repositioned as a CLI tool and its parsing API is in maintenance mode; \
+            for library JWT parsing, use biscuit or some other JWT library (check https://jwt.io for suggestions)"
+)]
+#[allow(deprecated)] // delegates to the deprecated parse_token
 pub fn parse<T: AsRef<str>>(token: T) -> Result<JwsToken, JwtParseError> {
     let token = token.as_ref();
     match parse_token(token)? {
@@ -106,4 +125,5 @@ pub fn parse<T: AsRef<str>>(token: T) -> Result<JwsToken, JwtParseError> {
 }
 
 #[cfg(test)]
+#[allow(deprecated)] // the tests exercise the deprecated library API deliberately
 mod test;

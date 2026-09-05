@@ -1,3 +1,5 @@
+// The CLI is the intended consumer of the library API.
+#[allow(deprecated)]
 use jwtinfo::{
     jw_output::{stringify, DisplayOptions},
     jw_parser::{parse_token, JWToken},
@@ -5,6 +7,7 @@ use jwtinfo::{
 };
 
 use clap::{Arg, ArgAction, Command};
+#[allow(deprecated)]
 use jwtinfo::jwe::decrypt_jwe;
 use serde_json::Value;
 use std::{
@@ -27,6 +30,10 @@ fn main() {
 
 /// Runs the CLI, so that every error flows through a single `Display`-form
 /// report.
+///
+/// The CLI is the intended consumer of the library's parsing/decryption
+/// entry points, deprecated since 0.7.0 for external users.
+#[allow(deprecated)]
 fn run() -> Result<(), Box<dyn Error>> {
     let mut matches = Command::new("jwtinfo")
         .version(env!("CARGO_PKG_VERSION"))

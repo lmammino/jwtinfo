@@ -4,6 +4,7 @@ use biscuit::jwk::JWK;
 use biscuit::Empty;
 
 use crate::jw_error::{JweCryptoError, JweError};
+#[allow(deprecated)]
 use crate::jw_parser::parse_jwe;
 use crate::jwe::jwe_handler::{decryptor, key_loader, JweHeader, JweToken};
 
@@ -21,6 +22,12 @@ pub struct DecryptedJwe {
 /// Convenience entry point for callers holding the compact token as a
 /// string; use [`decrypt_jwe`] instead if the token has already been parsed
 /// (e.g. via [`crate::jw_parser::parse_jwe`]) to avoid parsing it twice.
+#[deprecated(
+    since = "0.7.0",
+    note = "jwtinfo is being repositioned as a CLI tool and its parsing API is in maintenance mode; \
+            for library JWT parsing, use biscuit or some other JWT library (check https://jwt.io for suggestions)"
+)]
+#[allow(deprecated)]
 pub fn handle_jwe(token: &str, key: Option<Vec<u8>>) -> Result<DecryptedJwe, JweError> {
     let jwe_token = parse_jwe(token)?;
     decrypt_jwe(&jwe_token, key)
@@ -37,6 +44,11 @@ pub fn handle_jwe(token: &str, key: Option<Vec<u8>>) -> Result<DecryptedJwe, Jwe
 /// formats) and its material is matched against the token's `alg`:
 /// RSA private keys for `RSA-OAEP`/`RSA-OAEP-256`, symmetric keys for
 /// `dir`, AES-KW and GCMKW.
+#[deprecated(
+    since = "0.7.0",
+    note = "jwtinfo is being repositioned as a CLI tool and its parsing API is in maintenance mode; \
+            for library JWT parsing, use biscuit or some other JWT library (check https://jwt.io for suggestions)"
+)]
 pub fn decrypt_jwe(jwe_token: &JweToken, key: Option<Vec<u8>>) -> Result<DecryptedJwe, JweError> {
     let jwe_header: JweHeader = serde_json::from_str(&jwe_token.header)?;
     let is_jwt_body = jwe_header
@@ -113,4 +125,5 @@ pub fn decrypt_jwe(jwe_token: &JweToken, key: Option<Vec<u8>>) -> Result<Decrypt
 }
 
 #[cfg(test)]
+#[allow(deprecated)] // the tests exercise the deprecated library API deliberately
 mod test;

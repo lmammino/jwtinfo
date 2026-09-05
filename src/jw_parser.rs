@@ -142,6 +142,11 @@ fn decode_jwe(raw: &str) -> Result<JWToken, JwtParseError> {
 /// compact-serialization ABNF — an alternation of the 3-segment JWS shape
 /// and the 5-segment JWE shape, anchored at the end of input — and biscuit
 /// then splits the validated string once and decodes its parts.
+#[deprecated(
+    since = "0.7.0",
+    note = "jwtinfo is being repositioned as a CLI tool and its parsing API is in maintenance mode; \
+            for library JWT parsing, use biscuit or some other JWT library (check https://jwt.io for suggestions)"
+)]
 pub fn parse_token(token_str: &str) -> Result<JWToken, JwtParseError> {
     let raw = token_str.trim();
     let mut input = raw;
@@ -157,6 +162,12 @@ pub fn parse_token(token_str: &str) -> Result<JWToken, JwtParseError> {
 }
 
 /// Parses a JWE token, returning an error if the input is a JWS instead.
+#[deprecated(
+    since = "0.7.0",
+    note = "jwtinfo is being repositioned as a CLI tool and its parsing API is in maintenance mode; \
+            for library JWT parsing, use biscuit or some other JWT library (check https://jwt.io for suggestions)"
+)]
+#[allow(deprecated)]
 pub fn parse_jwe(token_str: &str) -> Result<JweToken, JwtParseError> {
     match parse_token(token_str)? {
         JWToken::Jwe(j) => Ok(j),
@@ -165,4 +176,5 @@ pub fn parse_jwe(token_str: &str) -> Result<JweToken, JwtParseError> {
 }
 
 #[cfg(test)]
+#[allow(deprecated)] // the tests exercise the deprecated library API deliberately
 mod test;

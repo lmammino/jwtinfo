@@ -23,6 +23,15 @@ A command line tool to get information about
 - **JWE decryption** - decrypt encrypted JWTs with `--key` (supports `dir`, `RSA-OAEP`, `RSA-OAEP-256` + `A128GCM`/`A256GCM`)
 - **Composable** - works seamlessly with tools like `jq` for advanced JSON processing
 
+> [!WARNING]
+> **Deprecation notice (0.7.0):** jwtinfo is being repositioned as a CLI tool.
+> The parsing library API (`jws::parse`, `jw_parser::parse_token`,
+> `jw_parser::parse_jwe`, `jwe::handle_jwe`, `jwe::decrypt_jwe`) is deprecated
+> and in maintenance mode: it still works, but it will not gain new features
+> and may be removed in a future release. For library JWT parsing, use
+> [biscuit](https://crates.io/crates/biscuit) or some other JWT library
+> ([check jwt.io for suggestions](https://jwt.io/libraries)).
+
 ### Rust Library
 
 - **Simple parsing API** - `jws::parse()` function for easy token decoding
