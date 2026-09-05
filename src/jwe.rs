@@ -60,6 +60,14 @@ pub fn decrypt_jwe(jwe_token: &JweToken, key: Option<Vec<u8>>) -> Result<Decrypt
     let alg = jwe_header.alg.as_str();
     let enc = jwe_header.enc.as_str();
 
+    // No compression or critical extensions are implemented. Reject these
+    // consistently before dispatch, including on the manual RSA/AES-KW paths.
+    for parameter in ["zip", "crit"] {
+        if jwe_header.extra.contains_key(parameter) {
+            return Err(JweCryptoError::UnsupportedHeaderParameter(parameter.into()).into());
+        }
+    }
+
     // Validate JOSE segment boundaries before either crypto backend joins
     // ciphertext and tag. Backend authentication alone cannot check them.
     if matches!(enc, "A128GCM" | "A256GCM") {

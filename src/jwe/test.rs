@@ -139,6 +139,32 @@ fn dir_rejects_a_nonempty_encrypted_key() {
 }
 
 #[test]
+fn unsupported_header_semantics_are_rejected_by_every_backend() {
+    use crate::jw_error::{JweCryptoError, JweError};
+    for (token, key) in [
+        (EXAMPLE_JWE, EXAMPLE_JWE_KEY),
+        (AESKW_JWE, AESKW_JWE_KEK_JWK),
+        (DIR_JWE, DIR_JWE_CEK),
+        (GCMKW_JWE, GCMKW_JWE_KEK),
+    ] {
+        for (parameter, value) in [
+            ("zip", serde_json::json!("DEF")),
+            ("zip", serde_json::json!("unknown")),
+            ("crit", serde_json::json!(["example"])),
+            ("crit", serde_json::json!([])),
+        ] {
+            let malformed = rewrite_parts(token, |parts| {
+                let mut header: serde_json::Value = serde_json::from_slice(&parts[0]).unwrap();
+                header[parameter] = value;
+                parts[0] = serde_json::to_vec(&header).unwrap();
+            });
+            assert!(matches!(handle_jwe(&malformed, Some(key.to_vec())),
+                Err(JweError::Crypto(JweCryptoError::UnsupportedHeaderParameter(p))) if p == parameter));
+        }
+    }
+}
+
+#[test]
 fn aes_kw_requires_the_key_size_declared_by_alg() {
     use crate::jw_error::{JweCryptoError, JweError};
     use aes_kw::{KeyInit, KwAes128, KwAes192, KwAes256};

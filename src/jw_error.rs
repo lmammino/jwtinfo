@@ -34,6 +34,8 @@ pub enum JweError {
 /// Errors related to JWE decryption and the underlying crypto operations.
 #[derive(Debug, Error)]
 pub enum JweCryptoError {
+    #[error("Unsupported JWE header parameter: {0}")]
+    UnsupportedHeaderParameter(String),
     #[error("{alg} key length mismatch: expected {expected} bytes, got {actual}")]
     KekLengthMismatch {
         alg: String,

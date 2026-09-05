@@ -135,6 +135,10 @@ Supported algorithms:
 
 Not yet supported: `RSA1_5`, `ECDH-ES` (+KW variants), `PBES2-*` (password-based encryption), the `A192GCM`/`A192GCMKW` variants, and the `A128CBC-HS256`/`A192CBC-HS384`/`A256CBC-HS512` content-encryption family.
 
+Decryption also rejects headers containing `zip` (compression) or `crit`
+(critical extensions), because neither is implemented. Such headers can
+still be inspected without a key.
+
 Supported key formats (auto-detected):
 
 - **PEM**: an RSA private key (`PKCS#1` or `PKCS#8`)
