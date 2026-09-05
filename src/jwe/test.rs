@@ -89,6 +89,46 @@ fn assert_parse_jwe_header_fields() {
 }
 
 #[test]
+fn aes_kw_requires_the_key_size_declared_by_alg() {
+    use crate::jw_error::{JweCryptoError, JweError};
+    use aes_kw::{KeyInit, KwAes128, KwAes192, KwAes256};
+    let cek = [3u8; 32];
+    for actual in [16, 24, 32] {
+        let kek = vec![2u8; actual];
+        let mut wrapped = [0u8; 40];
+        match actual {
+            16 => KwAes128::new_from_slice(&kek)
+                .unwrap()
+                .wrap_key(&cek, &mut wrapped),
+            24 => KwAes192::new_from_slice(&kek)
+                .unwrap()
+                .wrap_key(&cek, &mut wrapped),
+            _ => KwAes256::new_from_slice(&kek)
+                .unwrap()
+                .wrap_key(&cek, &mut wrapped),
+        }
+        .unwrap();
+        for (alg, expected) in [("A128KW", 16), ("A192KW", 24), ("A256KW", 32)] {
+            let token = aes256_token(
+                serde_json::json!({"alg": alg, "enc": "A256GCM"}),
+                &cek,
+                wrapped.to_vec(),
+            );
+            let result = handle_jwe(&token, Some(kek.clone()));
+            if actual == expected {
+                assert_eq!(result.unwrap().payload_string, "authenticated test payload");
+            } else {
+                assert!(
+                    matches!(result, Err(JweError::Crypto(JweCryptoError::KekLengthMismatch {
+                    expected: e, actual: a, ..
+                })) if e == expected && a == actual)
+                );
+            }
+        }
+    }
+}
+
+#[test]
 fn assert_handle_jwe_decrypts_payload() {
     let token = EXAMPLE_JWE.trim();
     let decrypted = handle_jwe(token, Some(EXAMPLE_JWE_KEY.to_vec())).unwrap();

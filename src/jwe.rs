@@ -99,6 +99,19 @@ pub fn decrypt_jwe(jwe_token: &JweToken, key: Option<Vec<u8>>) -> Result<Decrypt
             )?
         } else if matches!(alg, "A128KW" | "A192KW" | "A256KW") {
             let kek = loaded.into_symmetric(alg)?;
+            let expected = match alg {
+                "A128KW" => 16,
+                "A192KW" => 24,
+                _ => 32,
+            };
+            if kek.len() != expected {
+                return Err(JweCryptoError::KekLengthMismatch {
+                    alg: alg.to_owned(),
+                    expected,
+                    actual: kek.len(),
+                }
+                .into());
+            }
             decryptor::decrypt_aes_kw(
                 &kek,
                 jwe_token.aad(),

@@ -34,6 +34,12 @@ pub enum JweError {
 /// Errors related to JWE decryption and the underlying crypto operations.
 #[derive(Debug, Error)]
 pub enum JweCryptoError {
+    #[error("{alg} key length mismatch: expected {expected} bytes, got {actual}")]
+    KekLengthMismatch {
+        alg: String,
+        expected: usize,
+        actual: usize,
+    },
     #[error("Wrapped CEK length mismatch: expected {expected} bytes, got {actual}")]
     WrappedCekLengthMismatch { expected: usize, actual: usize },
     #[error("CEK length mismatch: expected {expected} bytes, got {actual}")]
