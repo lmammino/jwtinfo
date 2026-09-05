@@ -7,9 +7,8 @@ members = ["cargo:."]
 cargo-dist-version = "0.32.0"
 # CI backends to support
 ci = "github"
-# Install cargo-xwin from its main branch for Windows ARM64 builds. The latest
-# PyPI release passes clang-cl flags to clang when compiling ring; upstream's
-# main branch contains the compatibility fix.
+# Use cargo-xwin's clang backend for Windows ARM64 builds. Its default clang-cl
+# backend is incompatible with ring's C build on this target.
 github-build-setup = "dist-build-setup.yml"
 # The installers to generate for each app
 installers = ["shell", "powershell", "npm", "homebrew"]
