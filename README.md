@@ -23,6 +23,15 @@ A command line tool to get information about
 - **JWE decryption** - decrypt encrypted JWTs with `--key` (supports `dir`, `RSA-OAEP`, `RSA-OAEP-256` + `A128GCM`/`A256GCM`)
 - **Composable** - works seamlessly with tools like `jq` for advanced JSON processing
 
+> [!WARNING]
+> **Deprecation notice (0.7.0):** jwtinfo is being repositioned as a CLI tool.
+> The parsing library API (`jws::parse`, `jw_parser::parse_token`,
+> `jw_parser::parse_jwe`, `jwe::handle_jwe`, `jwe::decrypt_jwe`) is deprecated
+> and in maintenance mode: it still works, but it will not gain new features
+> and may be removed in a future release. For library JWT parsing, use
+> [biscuit](https://crates.io/crates/biscuit) or some other JWT library
+> ([check jwt.io for suggestions](https://jwt.io/libraries)).
+
 ### Rust Library
 
 - **Simple parsing API** - `jws::parse()` function for easy token decoding
@@ -126,6 +135,10 @@ Supported algorithms:
 
 Not yet supported: `RSA1_5`, `ECDH-ES` (+KW variants), `PBES2-*` (password-based encryption), the `A192GCM`/`A192GCMKW` variants, and the `A128CBC-HS256`/`A192CBC-HS384`/`A256CBC-HS512` content-encryption family.
 
+Decryption also rejects headers containing `zip` (compression) or `crit`
+(critical extensions), because neither is implemented. Such headers can
+still be inspected without a key.
+
 Supported key formats (auto-detected):
 
 - **PEM**: an RSA private key (`PKCS#1` or `PKCS#8`)
@@ -133,7 +146,11 @@ Supported key formats (auto-detected):
 - **JWK**: a JSON Web Key file (`kty` of `RSA` or `oct`)
 - **Raw bytes**: symmetric keys of 16/24/32 bytes (for `dir`, `AES-KW`, `GCMKW`)
 
-Any format works for any algorithm: the key material is parsed once and matched
+Files of exactly 16, 24, or 32 bytes are always treated as raw symmetric
+keys, without trimming or interpreting their bytes as text. Longer files
+are checked for PEM, JWK, and DER encodings.
+
+The decoded key material is matched
 against the token's `alg` (an RSA private key for `RSA-OAEP`/`RSA-OAEP-256`, a
 symmetric key for `dir`, `AES-KW` and `GCMKW`).
 For `dir`, the key file must contain the raw content-encryption key (CEK) bytes;
@@ -150,6 +167,7 @@ The display flags (`--header`, `--full`, `--pretty`) apply to whichever token is
 - **JWS token**: `--header` shows the header, `--full` shows `{header, claims}`.
 - **JWE with a plaintext (non-JWT) payload**: `--header` shows the JWE header, `--full` shows `{header, payload}`. Without any flag the raw plaintext is printed.
 - **JWE wrapping a nested JWT** (via the `cty: "JWT"` header): `--header` shows both headers as `{jwe_header, jws_header}`, `--full` shows `{jwe_header, jws_header, claims}`.
+- Nested display expects a JWS payload. A JWE inside a JWE is not recursively decrypted and produces an explicit token-type error.
 - **`--key` on a JWS token**: a warning is printed on stderr and the flag is ignored, but the JWS is still decoded normally.
 
 ## Install

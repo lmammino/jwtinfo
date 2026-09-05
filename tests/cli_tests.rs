@@ -6,6 +6,42 @@ const TEST_JWE: &str = include_str!("../src/jwe/tests/fixtures/simple_token.txt"
 const TEST_JWE_DECRYPTED: &str = "This is a super secret message!";
 
 #[test]
+fn malformed_jwe_headers_report_the_json_cause_once() {
+    let mut compact = biscuit::Compact::default();
+    for header in [br#"{"alg":"dir"}"#.to_vec(), b"not json".to_vec()] {
+        compact.parts.clear();
+        compact.push(&header).unwrap();
+        for _ in 0..4 {
+            compact.push(&Vec::<u8>::new()).unwrap();
+        }
+        let expected = if header.starts_with(b"{") {
+            "missing field `enc`"
+        } else {
+            "expected ident"
+        };
+        let mut cmd = cargo_bin_cmd!("jwtinfo");
+        cmd.args([
+            "--key",
+            "src/jwe/tests/fixtures/dir_cek.key",
+            &compact.encode(),
+        ])
+        .assert()
+        .failure()
+        .stdout("")
+        .stderr(
+            predicate::str::contains("Error: Invalid Header: JSON error,")
+                .and(predicate::str::contains(expected))
+                .and(predicate::str::contains("Error:").count(1)),
+        );
+    }
+    let mut cmd = cargo_bin_cmd!("jwtinfo");
+    cmd.arg(compact.encode())
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Invalid Header: JSON error,"));
+}
+
+#[test]
 fn test_default_shows_body() {
     let mut cmd = cargo_bin_cmd!("jwtinfo");
     cmd.arg(TEST_JWT)
@@ -369,4 +405,32 @@ fn test_jwe_without_key_shows_placeholder() {
         .stdout(predicate::str::contains(
             "Detected a JWE token but no private key was provided",
         ));
+}
+
+#[test]
+fn test_decryption_errors_print_in_display_form() {
+    // Regression test: decryption errors used to escape main via `?` and be
+    // printed by the Termination impl in Debug form, e.g.
+    // `Error: Crypto(UnsupportedAlgorithm("A128GCMKW: ..."))`. The CLI now
+    // has a single error boundary printing every error in Display form.
+    let mut cmd = cargo_bin_cmd!("jwtinfo");
+    let key_path = format!(
+        "{}/src/jwe/tests/fixtures/gcmkw_kek.key",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    let token = include_str!("../src/jwe/tests/fixtures/gcmkw_token.txt");
+    cmd.arg("--key")
+        .arg(key_path)
+        .arg(token.trim())
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains(
+            "Error: Unsupported algorithm: A128GCMKW",
+        ))
+        .stderr(predicate::str::contains("known limitation"))
+        .stderr(
+            predicate::str::contains("Crypto(")
+                .and(predicate::str::contains("UnsupportedAlgorithm("))
+                .not(),
+        );
 }

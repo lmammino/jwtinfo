@@ -1,10 +1,14 @@
+// The CLI is the intended consumer of the library API.
+#[allow(deprecated)]
 use jwtinfo::{
-    jw_output::{stringify, DisplayOptions},
+    jw_error::{JwtParseError, ParseError},
+    jw_output::{stringify, DisplayOptions, TokenOutput},
     jw_parser::{parse_token, JWToken},
     jws,
 };
 
 use clap::{Arg, ArgAction, Command};
+#[allow(deprecated)]
 use jwtinfo::jwe::decrypt_jwe;
 use serde_json::Value;
 use std::{
@@ -14,7 +18,24 @@ use std::{
 };
 
 #[doc(hidden)]
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() {
+    if let Err(e) = run() {
+        eprintln!("Error: {}", e);
+        // Exit directly rather than returning the error from a Result-typed
+        // main: the Termination impl would print it a second time, in Debug
+        // form. This is the single error boundary of the CLI: every error is
+        // reported once, in Display form.
+        std::process::exit(1);
+    }
+}
+
+/// Runs the CLI, so that every error flows through a single `Display`-form
+/// report.
+///
+/// The CLI is the intended consumer of the library's parsing/decryption
+/// entry points, deprecated since 0.7.0 for external users.
+#[allow(deprecated)]
+fn run() -> Result<(), Box<dyn Error>> {
     let mut matches = Command::new("jwtinfo")
         .version(env!("CARGO_PKG_VERSION"))
         .about("Shows information about a JWT (JSON Web Token)")
@@ -62,45 +83,47 @@ fn main() -> Result<(), Box<dyn Error>> {
         token = (buffer.trim()).to_string();
     }
 
-    match parse_token(&token) {
-        Ok(JWToken::Jws(t)) => {
+    let output = match parse_token(&token)? {
+        JWToken::Jws(t) => {
             // The --key flag is only meaningful for JWE tokens.
             if matches.get_one::<String>("key").is_some() {
                 eprintln!("Warning: the --key flag is only applicable to JWE tokens; ignoring it");
             }
-            println!("{}", stringify(None, t, opts));
-            Ok(())
+            stringify(TokenOutput::Jws(&t), opts)
         }
-        Ok(JWToken::Jwe(jwe)) => {
+        JWToken::Jwe(jwe) => {
+            let header: Value = serde_json::from_str(jwe.header())
+                .map_err(|e| JwtParseError::InvalidHeader(ParseError::InvalidJson(e)))?;
             if let Some(key_path) = matches.get_one::<String>("key") {
                 // Decrypt and render. If the payload is a nested JWT we show the
                 // outer JWE header together with the inner JWS; otherwise the
                 // flags apply to the JWE header and the raw plaintext.
                 let key = Some(fs::read(key_path)?);
-                let decrypted = decrypt_jwe(&jwe, &token, key)?;
-                let jwe_header: Value = serde_json::from_str(&jwe.header)?;
-                let output = if decrypted.is_jwt_body {
+                let decrypted = decrypt_jwe(&jwe, key)?;
+                if decrypted.is_jwt_body {
                     let content = jws::parse(&decrypted.payload_string)?;
-                    stringify(Some(jwe_header), content, opts)
+                    stringify(
+                        TokenOutput::NestedJws {
+                            header: &header,
+                            token: &content,
+                        },
+                        opts,
+                    )
                 } else {
-                    stringify(Some(jwe_header), decrypted.payload_string, opts)
-                };
-                println!("{}", output);
-                Ok(())
+                    stringify(
+                        TokenOutput::DecryptedJwe {
+                            header: &header,
+                            payload: &decrypted.payload_string,
+                        },
+                        opts,
+                    )
+                }
             } else {
                 // No key: render the JWE header with a placeholder body.
-                let jwe_header: Value = serde_json::from_str(&jwe.header)?;
-                let t = jws::jwe_placeholder(jwe_header);
-                println!("{}", stringify(None, t, opts));
-                Ok(())
+                stringify(TokenOutput::EncryptedJwe { header: &header }, opts)
             }
         }
-        Err(e) => {
-            eprintln!("Error: {}", e);
-            // The error has already been reported: exit directly instead of
-            // returning it from `main`, which would make the runtime print it
-            // a second time (in Debug form).
-            std::process::exit(1);
-        }
-    }
+    };
+    println!("{}", output);
+    Ok(())
 }

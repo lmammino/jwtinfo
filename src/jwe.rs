@@ -3,7 +3,8 @@ pub mod jwe_handler;
 use biscuit::jwk::JWK;
 use biscuit::Empty;
 
-use crate::jw_error::{JweCryptoError, JweError};
+use crate::jw_error::{JweCryptoError, JweError, JwtParseError, ParseError};
+#[allow(deprecated)]
 use crate::jw_parser::parse_jwe;
 use crate::jwe::jwe_handler::{decryptor, key_loader, JweHeader, JweToken};
 
@@ -21,28 +22,36 @@ pub struct DecryptedJwe {
 /// Convenience entry point for callers holding the compact token as a
 /// string; use [`decrypt_jwe`] instead if the token has already been parsed
 /// (e.g. via [`crate::jw_parser::parse_jwe`]) to avoid parsing it twice.
+#[deprecated(
+    since = "0.7.0",
+    note = "jwtinfo is being repositioned as a CLI tool and its parsing API is in maintenance mode; \
+            for library JWT parsing, use biscuit or some other JWT library (check https://jwt.io for suggestions)"
+)]
+#[allow(deprecated)]
 pub fn handle_jwe(token: &str, key: Option<Vec<u8>>) -> Result<DecryptedJwe, JweError> {
     let jwe_token = parse_jwe(token)?;
-    decrypt_jwe(&jwe_token, token, key)
+    decrypt_jwe(&jwe_token, key)
 }
 
 /// Decrypts an already-parsed JWE token using the provided key.
 ///
-/// `token_str` is the original compact representation the token was parsed
-/// from: the Base64url-encoded protected header segment doubles as the
-/// authenticated associated data, and the biscuit decryptor re-parses the
-/// compact form itself.
+/// The token carries everything the decryptors need: its compact form,
+/// held as biscuit's split parts (fed directly to the `dir`/GCMKW
+/// decryptor — no string is re-parsed — and used to derive the AAD), and
+/// the decoded segments (consumed by the RSA-OAEP and AES-KW paths).
 ///
 /// The key file is loaded once (see `key_loader::load_key` for the supported
 /// formats) and its material is matched against the token's `alg`:
 /// RSA private keys for `RSA-OAEP`/`RSA-OAEP-256`, symmetric keys for
 /// `dir`, AES-KW and GCMKW.
-pub fn decrypt_jwe(
-    jwe_token: &JweToken,
-    token_str: &str,
-    key: Option<Vec<u8>>,
-) -> Result<DecryptedJwe, JweError> {
-    let jwe_header: JweHeader = serde_json::from_str(&jwe_token.header)?;
+#[deprecated(
+    since = "0.7.0",
+    note = "jwtinfo is being repositioned as a CLI tool and its parsing API is in maintenance mode; \
+            for library JWT parsing, use biscuit or some other JWT library (check https://jwt.io for suggestions)"
+)]
+pub fn decrypt_jwe(jwe_token: &JweToken, key: Option<Vec<u8>>) -> Result<DecryptedJwe, JweError> {
+    let jwe_header: JweHeader = serde_json::from_str(jwe_token.header())
+        .map_err(|e| JwtParseError::InvalidHeader(ParseError::InvalidJson(e)))?;
     let is_jwt_body = jwe_header
         .cty
         .as_deref()
@@ -51,6 +60,28 @@ pub fn decrypt_jwe(
 
     let alg = jwe_header.alg.as_str();
     let enc = jwe_header.enc.as_str();
+
+    // No compression or critical extensions are implemented. Reject these
+    // consistently before dispatch, including on the manual RSA/AES-KW paths.
+    for parameter in ["zip", "crit"] {
+        if jwe_header.extra.contains_key(parameter) {
+            return Err(JweCryptoError::UnsupportedHeaderParameter(parameter.into()).into());
+        }
+    }
+
+    // Validate JOSE segment boundaries before either crypto backend joins
+    // ciphertext and tag. Backend authentication alone cannot check them.
+    if matches!(enc, "A128GCM" | "A256GCM") {
+        if jwe_token.iv().len() != 12 {
+            return Err(JweCryptoError::InvalidIvLength.into());
+        }
+        if jwe_token.tag().len() != 16 {
+            return Err(JweCryptoError::InvalidTagLength(jwe_token.tag().len()).into());
+        }
+    }
+    if alg == "dir" && !jwe_token.key_encrypted().is_empty() {
+        return Err(JweCryptoError::NonEmptyDirectKey.into());
+    }
 
     let cipher = if alg.starts_with("PBES2") {
         // PBES2 (password-based) decryption is not implemented yet.
@@ -80,24 +111,37 @@ pub fn decrypt_jwe(
             // biscuit does not implement RSA key management: use the `rsa`
             // crate to unwrap the CEK, then decrypt the content with AES-GCM.
             let rsa_key = loaded.into_rsa(alg)?;
-            let cek = decryptor::decrypt_rsa_oaep(&rsa_key, &jwe_token.key_encrypted, alg)?;
+            let cek = decryptor::decrypt_rsa_oaep(&rsa_key, jwe_token.key_encrypted(), alg)?;
             decryptor::decrypt_gcm_content(
                 &cek,
-                &jwe_token.aad,
-                &jwe_token.iv,
-                &jwe_token.ciphertext,
-                &jwe_token.tag,
+                jwe_token.aad(),
+                jwe_token.iv(),
+                jwe_token.ciphertext(),
+                jwe_token.tag(),
                 enc,
             )?
         } else if matches!(alg, "A128KW" | "A192KW" | "A256KW") {
             let kek = loaded.into_symmetric(alg)?;
+            let expected = match alg {
+                "A128KW" => 16,
+                "A192KW" => 24,
+                _ => 32,
+            };
+            if kek.len() != expected {
+                return Err(JweCryptoError::KekLengthMismatch {
+                    alg: alg.to_owned(),
+                    expected,
+                    actual: kek.len(),
+                }
+                .into());
+            }
             decryptor::decrypt_aes_kw(
                 &kek,
-                &jwe_token.aad,
-                &jwe_token.key_encrypted,
-                &jwe_token.iv,
-                &jwe_token.ciphertext,
-                &jwe_token.tag,
+                jwe_token.aad(),
+                jwe_token.key_encrypted(),
+                jwe_token.iv(),
+                jwe_token.ciphertext(),
+                jwe_token.tag(),
                 enc,
             )?
         } else {
@@ -105,7 +149,7 @@ pub fn decrypt_jwe(
             // symmetric keys (as an octet JWK).
             let kek = loaded.into_symmetric(alg)?;
             let jwk = JWK::new_octet_key(&kek, Empty {});
-            decryptor::decrypt_with_biscuit(token_str, &jwk, alg, enc)?
+            decryptor::decrypt_with_biscuit(jwe_token.compact(), &jwk, alg, enc)?
         }
     };
 
@@ -117,4 +161,5 @@ pub fn decrypt_jwe(
 }
 
 #[cfg(test)]
+#[allow(deprecated)] // the tests exercise the deprecated library API deliberately
 mod test;
