@@ -46,6 +46,10 @@ pub enum JweCryptoError {
     CekLengthMismatch { expected: usize, actual: usize },
     #[error("IV length invalid: expected 12 bytes")]
     InvalidIvLength,
+    #[error("Authentication tag length invalid: expected 16 bytes, got {0}")]
+    InvalidTagLength(usize),
+    #[error("The dir algorithm requires an empty encrypted-key segment")]
+    NonEmptyDirectKey,
     #[error("Unsupported key length: {0}")]
     UnsupportedKeyLength(usize),
     #[error("Decryption failed: {0}")]

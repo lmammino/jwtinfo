@@ -60,6 +60,20 @@ pub fn decrypt_jwe(jwe_token: &JweToken, key: Option<Vec<u8>>) -> Result<Decrypt
     let alg = jwe_header.alg.as_str();
     let enc = jwe_header.enc.as_str();
 
+    // Validate JOSE segment boundaries before either crypto backend joins
+    // ciphertext and tag. Backend authentication alone cannot check them.
+    if matches!(enc, "A128GCM" | "A256GCM") {
+        if jwe_token.iv.len() != 12 {
+            return Err(JweCryptoError::InvalidIvLength.into());
+        }
+        if jwe_token.tag.len() != 16 {
+            return Err(JweCryptoError::InvalidTagLength(jwe_token.tag.len()).into());
+        }
+    }
+    if alg == "dir" && !jwe_token.key_encrypted.is_empty() {
+        return Err(JweCryptoError::NonEmptyDirectKey.into());
+    }
+
     let cipher = if alg.starts_with("PBES2") {
         // PBES2 (password-based) decryption is not implemented yet.
         return Err(JweCryptoError::UnsupportedAlgorithm(format!(

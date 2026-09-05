@@ -88,6 +88,56 @@ fn assert_parse_jwe_header_fields() {
     assert_eq!(header.enc, "A256GCM");
 }
 
+/// Rewrite decoded segments while preserving the original header encoding.
+fn rewrite_parts(token: &str, update: impl FnOnce(&mut [Vec<u8>])) -> String {
+    let compact = biscuit::Compact::decode(token.trim());
+    let mut parts: Vec<Vec<u8>> = (0..5).map(|i| compact.part(i).unwrap()).collect();
+    update(&mut parts);
+    let mut result = biscuit::Compact::default();
+    for part in parts {
+        result.push(&part).unwrap();
+    }
+    result.encode()
+}
+
+#[test]
+fn decryption_rejects_invalid_gcm_segment_boundaries() {
+    use crate::jw_error::{JweCryptoError, JweError};
+    for (token, key) in [
+        (EXAMPLE_JWE, EXAMPLE_JWE_KEY),
+        (AESKW_JWE, AESKW_JWE_KEK_JWK),
+        (DIR_JWE, DIR_JWE_CEK),
+    ] {
+        for remaining_tag_len in [0, 8, 15, 17] {
+            let malformed = rewrite_parts(token, |parts| {
+                let joined = [parts[3].as_slice(), parts[4].as_slice()].concat();
+                let boundary = joined.len() - remaining_tag_len;
+                parts[3] = joined[..boundary].to_vec();
+                parts[4] = joined[boundary..].to_vec();
+            });
+            assert!(matches!(handle_jwe(&malformed, Some(key.to_vec())),
+                Err(JweError::Crypto(JweCryptoError::InvalidTagLength(n))) if n == remaining_tag_len));
+        }
+        let malformed = rewrite_parts(token, |parts| {
+            parts[2].pop();
+        });
+        assert!(matches!(
+            handle_jwe(&malformed, Some(key.to_vec())),
+            Err(JweError::Crypto(JweCryptoError::InvalidIvLength))
+        ));
+    }
+}
+
+#[test]
+fn dir_rejects_a_nonempty_encrypted_key() {
+    use crate::jw_error::{JweCryptoError, JweError};
+    let token = rewrite_parts(DIR_JWE, |parts| parts[1] = b"unexpected key".to_vec());
+    assert!(matches!(
+        handle_jwe(&token, Some(DIR_JWE_CEK.to_vec())),
+        Err(JweError::Crypto(JweCryptoError::NonEmptyDirectKey))
+    ));
+}
+
 #[test]
 fn aes_kw_requires_the_key_size_declared_by_alg() {
     use crate::jw_error::{JweCryptoError, JweError};
