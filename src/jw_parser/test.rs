@@ -6,9 +6,7 @@ const TEST_JWE: &str = include_str!("../jwe/tests/fixtures/simple_token.txt");
 
 #[test]
 fn jws_3_parts_produces_jws_token() {
-    let JWToken::Jws(t) = parse_token(TEST_JWS).unwrap() else {
-        panic!("expected Jws")
-    };
+    let t = parse_token(TEST_JWS).unwrap().expect_jws();
     assert_eq!(t.header["alg"], "HS256");
     assert_eq!(t.header["typ"], "JWT");
     assert_eq!(t.body["foo"], "bar");
@@ -17,12 +15,10 @@ fn jws_3_parts_produces_jws_token() {
 
 #[test]
 fn jwe_5_parts_produces_jwe_token() {
-    let JWToken::Jwe(j) = parse_token(TEST_JWE.trim()).unwrap() else {
-        panic!("expected Jwe")
-    };
-    assert!(j.header.contains("A256GCM"));
-    assert_eq!(j.iv.len(), 12);
-    assert_eq!(j.tag.len(), 16);
+    let j = parse_token(TEST_JWE.trim()).unwrap().expect_jwe();
+    assert!(j.header().contains("A256GCM"));
+    assert_eq!(j.iv().len(), 12);
+    assert_eq!(j.tag().len(), 16);
 }
 
 #[test]
@@ -85,24 +81,20 @@ fn empty_input_is_rejected() {
 
 #[test]
 fn empty_signature_segment_is_allowed() {
-    // Unsecured JWT (RFC 7518 §3, `alg: none`): empty signature segment.
+    // Unsecured JWT (RFC 7518 §3.6, `alg: none`): empty signature segment.
     let token = "eyJhbGciOiJub25lIn0.eyJmb28iOiJiYXIifQ.";
-    let JWToken::Jws(t) = parse_token(token).unwrap() else {
-        panic!("expected Jws")
-    };
+    let t = parse_token(token).unwrap().expect_jws();
     assert_eq!(t.body["foo"], "bar");
     assert!(t.signature.is_empty());
 }
 
 #[test]
 fn empty_encrypted_key_segment_is_allowed() {
-    // `dir` JWE (RFC 7516 §4.5): the encrypted key is an empty octet sequence.
+    // `dir` JWE (RFC 7518 §4.5): the encrypted key is an empty octet sequence.
     let token = "eyJhbGciOiJkaXIiLCJlbmMiOiJBMTI4R0NNIn0..VvWKimYzMS9Z9MkX.uO-BF7wDC-g6L5h4DUa1iim2cTCvCFDW._cE8ch4ES_mGc3YtpnEWJA";
-    let JWToken::Jwe(j) = parse_token(token).unwrap() else {
-        panic!("expected Jwe")
-    };
-    assert!(j.key_encrypted.is_empty());
-    assert_eq!(j.ciphertext.len(), 24);
+    let j = parse_token(token).unwrap().expect_jwe();
+    assert!(j.key_encrypted().is_empty());
+    assert_eq!(j.ciphertext().len(), 24);
 }
 
 #[test]
@@ -124,4 +116,52 @@ fn parse_jwe_on_a_jws_reports_not_a_jwe() {
         err.to_string(),
         "Expected a JWE token (5 parts), but the input is a JWS (3 parts)"
     );
+}
+
+#[test]
+fn empty_header_segment_fails_fast() {
+    // The grammar requires non-empty header segments (b64url, not
+    // b64url_or_empty), so tokens like ".p.s" are rejected structurally
+    // instead of producing a confusing empty-JSON decode error.
+    assert!(matches!(
+        parse_token(".p.s"),
+        Err(JwtParseError::InvalidSegment)
+    ));
+    // A JWE with an empty header used to parse (empty header string) and
+    // only fail later when the header was deserialized.
+    assert!(matches!(
+        parse_token("..iv.ct.tag"),
+        Err(JwtParseError::InvalidSegment)
+    ));
+    // "...." (five empty segments) is where the old code was ugliest: it
+    // leaked a raw serde Debug string ("Error(\"EOF while parsing a value\",
+    // line: 1, column: 0)") out of main. "..a" is its 3-part twin.
+    assert!(matches!(
+        parse_token("...."),
+        Err(JwtParseError::InvalidSegment)
+    ));
+    assert!(matches!(
+        parse_token("..a"),
+        Err(JwtParseError::InvalidSegment)
+    ));
+}
+
+#[test]
+fn shape_grammar_rejects_prefix_matches() {
+    // The eof anchor prevents the 3-segment JWS shape from matching the
+    // prefix of a longer token.
+    assert!(matches!(
+        parse_token("a.b.c.d.e.f.g"),
+        Err(JwtParseError::WrongPartCount { found: 7 })
+    ));
+}
+
+#[test]
+fn jwe_token_carries_raw_form_and_derives_aad() {
+    let token = TEST_JWE.trim();
+    let j = parse_token(token).unwrap().expect_jwe();
+    // The compact form round-trips verbatim (the empty `dir` key segment
+    // included), and the AAD is derived from its first segment.
+    assert_eq!(j.raw(), token);
+    assert_eq!(j.aad(), token.split('.').next().unwrap().as_bytes());
 }

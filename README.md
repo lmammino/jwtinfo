@@ -1,156 +1,160 @@
 # jwtinfo
 
 [![build badge](https://github.com/lmammino/jwtinfo/workflows/Rust/badge.svg)](https://github.com/lmammino/jwtinfo/actions?query=workflow%3ARust)
-[![codecov](https://codecov.io/gh/lmammino/jwtinfo/graph/badge.svg?token=jYukD16Axe)](https://codecov.io/gh/lmammino/jwtinfo)
+[![codecov](https://codecov.io/gh/lmammino/jwtinfo/graph/badge.svg)](https://codecov.io/gh/lmammino/jwtinfo)
 [![crates.io badge](https://img.shields.io/crates/v/jwtinfo.svg)](https://crates.io/crates/jwtinfo)
-[![Documentation](https://docs.rs/jwtinfo/badge.svg)](https://docs.rs/jwtinfo)
-[![rustc badge](https://img.shields.io/badge/rustc-1.40+-lightgray.svg)](https://blog.rust-lang.org/2019/12/19/Rust-1.40.0.html)
-[![Clippy Linting Result](https://img.shields.io/badge/clippy-<3-yellowgreen)](https://github.com/rust-lang/rust-clippy)
-[![License: MIT OR Apache-2.0](https://img.shields.io/crates/l/jwtinfo.svg)](#license)
-[![Gitpod Ready-to-Code](https://img.shields.io/badge/Gitpod-Ready--to--Code-blue?logo=gitpod)](https://gitpod.io/#https://github.com/lmammino/jwtinfo)
+[![API documentation](https://docs.rs/jwtinfo/badge.svg)](https://docs.rs/jwtinfo)
+[![License: MIT](https://img.shields.io/crates/l/jwtinfo.svg)](#license)
 
-A command line tool to get information about
-[JWTs](https://tools.ietf.org/html/rfc7519) (JSON Web Tokens).
+A command line tool to inspect [JWTs](https://www.rfc-editor.org/rfc/rfc7519):
+decode the header and claims of a signed token (JWS), or decrypt an encrypted
+token (JWE) using your key.
+
+> [!IMPORTANT]
+> **The Rust library API is deprecated starting with 0.7.0.** jwtinfo is
+> maintained as a CLI tool. Its library parsing/decryption API remains
+> functional but is in maintenance mode, will not gain new features, and may
+> be removed in a future release. See [Rust library deprecation](#rust-library-deprecation)
+> for migration guidance. The CLI is not deprecated.
+
+This README follows development on `main`. Package managers and the
+installers below provide the latest published release, which may not yet
+include all changes described here. See the [releases](https://github.com/lmammino/jwtinfo/releases)
+and [changelog](CHANGELOG.md) for version-specific changes.
 
 ## Features
 
-### CLI Tool
+- Inspect JWS headers and JSON claims without verifying the signature.
+- Decrypt supported JWE tokens with an RSA or symmetric key.
+- Show the payload, headers, or full contents, with optional JSON formatting.
+- Read a token from an argument or stdin and pipe JSON output to other tools.
+- Inspect both headers and the inner claims of a JWE wrapping a JWS.
 
-- **Decode JWT tokens** without verification - quickly inspect header and claims
-- **Multiple display modes**: view body only (default), header only (`--header`), or both (`--full`)
-- **Pretty printing** with `--pretty` flag for readable JSON output
-- **Stdin support** - pipe tokens directly or use as command argument
-- **JWE decryption** - decrypt encrypted JWTs with `--key` (supports `dir`, `RSA-OAEP`, `RSA-OAEP-256` + `A128GCM`/`A256GCM`)
-- **Composable** - works seamlessly with tools like `jq` for advanced JSON processing
-
-### Rust Library
-
-- **Simple parsing API** - `jws::parse()` function for easy token decoding
-- **Type-safe access** - header and body exposed as `serde_json::Value`
-- **FromStr implementation** - parse tokens using `.parse::<jws::JwsToken>()`
-- **No verification** - focused on inspection and debugging, not validation
-- **JWE support** - detects encrypted tokens and handles them appropriately
+jwtinfo is an inspection tool: it does not validate JWS signatures, expiry,
+issuer, or audience. Successful JWE decryption checks its authentication tag,
+but does not verify the signature or claims of a nested JWS.
 
 ## Usage
 
-`jwtinfo` is a command line interface that allows you to inspect a given JWT.
-The tool currently allows you to see the body of the token in JSON format. It
-accepts a single command line argument which should be a valid JWT.
-
-Here's an example:
+Pass a compact token as an argument, or use `-` to read it from stdin.
+Surrounding whitespace is accepted.
 
 ```bash
-jwtinfo eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+token='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c'
+jwtinfo "$token"
 ```
 
-Which will print:
+The default output is the JSON payload:
 
 ```json
-{ "sub": "1234567890", "name": "John Doe", "iat": 1516239022 }
+{"iat":1516239022,"name":"John Doe","sub":"1234567890"}
 ```
 
-If you want to visualize the token header (rather than the body), you can do
-that by passing the `--header` flag:
+Show the header or both the header and claims:
 
 ```bash
-jwtinfo --header eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+jwtinfo --header "$token"
+jwtinfo --full --pretty "$token"
 ```
 
-Which will print:
-
-```json
-{ "alg": "HS256", "typ": "JWT" }
-```
-
-If you want to see both the header and the claims at the same time, you can use
-the `--full` flag:
-
-```bash
-jwtinfo --full eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
-```
-
-Which will print:
+The second command prints:
 
 ```json
 {
-    "header": { "alg": "HS256", "typ": "JWT" },
-    "claims": { "sub": "1234567890", "name": "John Doe", "iat": 1516239022 }
+  "claims": {
+    "iat": 1516239022,
+    "name": "John Doe",
+    "sub": "1234567890"
+  },
+  "header": {
+    "alg": "HS256",
+    "typ": "JWT"
+  }
 }
 ```
 
-For better readability, you can combine `--full` with the `--pretty` flag to
-get formatted output:
+Read a token from a file or use [jq](https://jqlang.org/) to select a claim:
 
 ```bash
-jwtinfo --full --pretty eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+jwtinfo --full --pretty - < token.txt
+jwtinfo "$token" | jq -r .name
 ```
 
-Which will print:
+| Option | Purpose |
+| --- | --- |
+| `-H, --header` | Show the available header(s) |
+| `-F, --full` | Show the headers and payload |
+| `-P, --pretty` | Pretty-print JSON output |
+| `-K, --key <path>` | Read a key file to decrypt a JWE |
+| `-h, --help` | Show command-line help |
+| `-V, --version` | Show the installed version |
 
-```json
-{
-    "header": {
-        "alg": "HS256",
-        "typ": "JWT"
-    },
-    "claims": {
-        "sub": "1234567890",
-        "name": "John Doe",
-        "iat": 1516239022
-    }
-}
-```
-
-You can combine the tool with other command line utilities, for instance
-[`jq`](https://stedolan.github.io/jq/):
-
-```bash
-jwtinfo eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c | jq .
-```
+`--header` and `--full` are mutually exclusive. Parsing, file-reading,
+and decryption failures produce an error on stderr and a nonzero exit status.
+Supplying `--key` for a JWS prints a warning and continues decoding; it
+does not verify the signature.
 
 ### JWE decryption
 
-If the token is encrypted (JWE), and you own the decryption key, you can see the decrypted payload by providing the key file:
+Provide a key file and a compact encrypted token:
 
 ```bash
-jwtinfo --key /path/to/private.pem "$(cat /path/to/jwe.txt)"
+jwtinfo --key /path/to/private.pem - < /path/to/jwe.txt
+jwtinfo --key /path/to/private.pem --full --pretty - < /path/to/jwe.txt
 ```
 
-Supported algorithms:
+Without a key, a JWE produces a placeholder asking for a decryption key.
+You can still inspect its header:
 
-- **Key management (`alg`)**: `dir`, `RSA-OAEP`, `RSA-OAEP-256`, `A128KW`, `A192KW`, `A256KW`
-- **Content encryption (`enc`)**: `A128GCM`, `A256GCM`
+```bash
+jwtinfo --header --pretty - < /path/to/jwe.txt
+```
 
-> [!IMPORTANT]
-> **Known limitation — AES-GCM Key Wrap (`A128GCMKW` / `A256GCMKW`)**: GCMKW decryption is delegated to the [`biscuit`](https://crates.io/crates/biscuit) library, which expects the GCMKW `iv` and `tag` protected-header parameters as JSON *byte arrays*, while [RFC 7518 §4.7](https://datatracker.ietf.org/doc/html/rfc7518#section-4.7) defines them as base64url *strings*. As a result, only tokens produced by `biscuit` itself can be decrypted; standards-compliant tokens (as produced by most JOSE libraries) are detected up front and rejected with a clear error.
+Supported content encryption (`enc`): **`A128GCM` and `A256GCM`**.
 
-Not yet supported: `RSA1_5`, `ECDH-ES` (+KW variants), `PBES2-*` (password-based encryption), the `A192GCM`/`A192GCMKW` variants, and the `A128CBC-HS256`/`A192CBC-HS384`/`A256CBC-HS512` content-encryption family.
+| Key management (`alg`) | Required key | Accepted formats |
+| --- | --- | --- |
+| `RSA-OAEP`, `RSA-OAEP-256` | RSA private key | PKCS#1/PKCS#8 PEM or DER; RSA JWK |
+| `dir` | Content-encryption key: 16 bytes for `A128GCM`, 32 for `A256GCM` | Raw bytes; `oct` JWK |
+| `A128KW`, `A192KW`, `A256KW` | Key-encryption key: 16, 24, or 32 bytes respectively | Raw bytes; `oct` JWK |
 
-Supported key formats (auto-detected):
+Files of exactly 16, 24, or 32 bytes are always treated as raw symmetric
+keys, without trimming or text decoding. Other files are checked for PEM,
+JWK, and DER encodings. A raw file contains the key bytes themselves, not
+their hexadecimal or base64 text representation; do not append a newline.
 
-- **PEM**: an RSA private key (`PKCS#1` or `PKCS#8`)
-- **DER**: the binary equivalents of the above
-- **JWK**: a JSON Web Key file (`kty` of `RSA` or `oct`)
-- **Raw bytes**: symmetric keys of 16/24/32 bytes (for `dir`, `AES-KW`, `GCMKW`)
+### Display modes
 
-Any format works for any algorithm: the key material is parsed once and matched
-against the token's `alg` (an RSA private key for `RSA-OAEP`/`RSA-OAEP-256`, a
-symmetric key for `dir`, `AES-KW` and `GCMKW`).
-For `dir`, the key file must contain the raw content-encryption key (CEK) bytes;
-for `AES-KW` and `GCMKW` it must contain the key-encryption key (KEK).
-EC and OKP (EdDSA) keys are not supported, as no supported JWE algorithm can use them.
+| Input | Default | `--header` | `--full` |
+| --- | --- | --- | --- |
+| JWS | JSON claims | Header | `{header, claims}` |
+| JWE without a key | JSON placeholder string | JWE header | `{header, claims: placeholder}` |
+| Decrypted JWE plaintext | Raw UTF-8 text | JWE header | `{header, payload}` |
+| Decrypted JWE with `cty: "JWT"` and an inner JWS | Inner JSON claims | `{jwe_header, jws_header}` | `{jwe_header, jws_header, claims}` |
 
-> [!NOTE]
-> **Encrypted [JWE](https://datatracker.ietf.org/doc/html/rfc7516) Tokens**: If you provide an encrypted JWE token without a key, `jwtinfo` will show a placeholder message indicating that a private key is required. Use `-K/--key` to decrypt it. The header can still be inspected normally using the `--header` flag.
+`--pretty` formats JSON output. It leaves raw decrypted plaintext unchanged,
+even if that plaintext happens to contain JSON. In full output, a plaintext
+JWE payload is a JSON string. The `cty: "JWT"` header determines whether
+the decrypted payload is parsed as a nested token.
 
-### Display flags and token types
+### Limitations
 
-The display flags (`--header`, `--full`, `--pretty`) apply to whichever token is being shown, including the decrypted payload:
-
-- **JWS token**: `--header` shows the header, `--full` shows `{header, claims}`.
-- **JWE with a plaintext (non-JWT) payload**: `--header` shows the JWE header, `--full` shows `{header, payload}`. Without any flag the raw plaintext is printed.
-- **JWE wrapping a nested JWT** (via the `cty: "JWT"` header): `--header` shows both headers as `{jwe_header, jws_header}`, `--full` shows `{jwe_header, jws_header, claims}`.
-- **`--key` on a JWS token**: a warning is printed on stderr and the flag is ignored, but the JWS is still decoded normally.
+- JWS inspection expects a base64url-encoded JSON header and JSON payload;
+  it does not support detached or unencoded payloads. Empty signatures,
+  including unsecured JWTs with `alg: "none"`, can be inspected.
+- Decrypted JWE payloads must be UTF-8 text. Binary payloads are not supported.
+- Nested display supports JWE → JWS. A payload marked `cty: "JWT"` that
+  contains another JWE is rejected; recursive decryption is not implemented.
+- Decryption rejects headers containing `zip` (compression) or `crit`
+  (critical extensions). Their headers can still be inspected without a key.
+- `RSA1_5`, `ECDH-ES` (including key-wrap variants), `PBES2-*`,
+  `A192GCM`, `A192GCMKW`, and the `A128CBC-HS256` / `A192CBC-HS384` /
+  `A256CBC-HS512` family are unsupported, as are EC and OKP keys.
+- **GCMKW interoperability:** `A128GCMKW` / `A256GCMKW` decryption uses
+  biscuit, which expects the header's `iv` and `tag` as JSON byte arrays.
+  The base64url strings required by [RFC 7518 §4.7](https://www.rfc-editor.org/rfc/rfc7518.html#section-4.7)
+  are rejected with an explicit limitation error. Do not expect standard
+  GCMKW tokens from other JOSE libraries to decrypt.
 
 ## Install
 
@@ -210,7 +214,7 @@ You can install the binary in your system with
 [`cargo`](https://doc.rust-lang.org/cargo/getting-started/installation.html):
 
 ```bash
-cargo install jwtinfo
+cargo install jwtinfo --locked
 ```
 
 ### Precompiled binaries
@@ -263,81 +267,71 @@ alternative called
 [`jwtinfo.sh`](https://gist.github.com/lmammino/920ee0699af627a3492f86c607c859f6)
 is available.
 
-## Programmatic usage
+## Rust library deprecation
 
-Add to your `Cargo.toml`:
+Starting with 0.7.0, the parsing/decryption functions `jws::parse`,
+`jw_parser::parse_token`, `jw_parser::parse_jwe`, `jwe::handle_jwe`, and
+`jwe::decrypt_jwe` are deprecated. The library remains functional in
+maintenance mode, but new integrations should use a dedicated JWT library.
+Consider [biscuit](https://crates.io/crates/biscuit), which jwtinfo uses
+internally, or consult the [JWT library directory](https://jwt.io/libraries);
+check the library's algorithm and validation support for your application.
 
-```toml
-[dependencies]
-jwtinfo = "*"
-```
+Version 0.7.0 also breaks the previous library API. Existing consumers
+should consult the [migration details in the changelog](CHANGELOG.md#breaking-library-api)
+and [API documentation](https://docs.rs/jwtinfo). In particular:
 
-Then use it in your code:
+- `jwt::Token` becomes `jws::JwsToken`; the `jwt` module becomes `jws`.
+- `jws::parse` and `JwsToken::from_str` accept JWS inputs only. The
+  deprecated `jw_parser::parse_token` returns a `JWToken` enum for either
+  JWS or JWE.
+- JWE fields use read-only accessors, and decryption/output signatures and
+  error types have changed.
 
-```rust
-use jwtinfo::{jws};
-let token_str = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
-let token = jws::parse(token_str).unwrap();
-assert_eq!(token.header.to_string(), "{\"alg\":\"HS256\",\"typ\":\"JWT\"}");
-assert_eq!(token.body.to_string(), "{\"sub\":\"1234567890\",\"name\":\"John Doe\",\"iat\":1516239022}");
-```
+Installing and using the CLI through Cargo remains supported.
 
-Since `jws::JwsToken` implements `str::FromStr`, you can also do the following:
+## Development
 
-```rust
-use jwtinfo::{jws};
-let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c".parse::<jws::JwsToken>().unwrap();
-assert_eq!(token.header.to_string(), "{\"alg\":\"HS256\",\"typ\":\"JWT\"}");
-assert_eq!(token.body.to_string(), "{\"sub\":\"1234567890\",\"name\":\"John Doe\",\"iat\":1516239022}");
-```
-
-## Coverage reports
-
-If you want to run coverage reports locally you can follow this recipe.
-
-First, you will need Rust Nightly that you can get with `rustup`
+Use a current stable Rust toolchain. CI tests stable Rust; this project does
+not currently declare a minimum supported Rust version.
 
 ```bash
-rustup install nightly
+cargo build --locked
+cargo test --locked
+cargo clippy --locked --all-targets --all-features -- -D warnings
+cargo fmt --check
 ```
 
-You will also need `grcov` that you can get with `cargo`:
+To run the local CLI:
 
 ```bash
-cargo install grcov
+cargo run -- --help
+cargo run -- --full --pretty - < token.txt
 ```
 
-Now you can run the tests in profile mode:
+### Coverage
+
+CI uses [cargo-llvm-cov](https://github.com/taiki-e/cargo-llvm-cov).
+For a local HTML report:
 
 ```bash
-export CARGO_INCREMENTAL=0
-export RUSTFLAGS="-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Zno-landing-pads"
-cargo +nightly test
+rustup component add llvm-tools-preview
+cargo install cargo-llvm-cov --locked
+cargo llvm-cov --all-features --workspace --html
 ```
 
-This will run the tests and generate coverage info in `./target/debug/`
-
-Now you can run `grcov`:
+Open `target/llvm-cov/html/index.html`. To produce the LCOV report used by CI:
 
 ```bash
-grcov ./target/debug/ -s . -t html --llvm --branch --ignore-not-existing -o ./target/debug/coverage/
+cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
 ```
 
-Finally, you will have your browsable coverage report at
-`./target/debug/coverage/index.html`.
+### Releases
 
-### Tarpaulin coverage
-
-Since `grcov` tends to be somewhat inaccurate at times, you can also get a
-coverage report by running [tarpaulin](https://github.com/xd009642/tarpaulin)
-using docker:
-
-```bash
-docker run --security-opt seccomp=unconfined -v "${PWD}:/volume" xd009642/tarpaulin:develop-nightly bash -c 'cargo build && cargo tarpaulin -o Html'
-```
-
-Your coverage report will be available as `tarpaulin-report.html` in the root of
-the project.
+Releases are driven by version tags and cargo-dist. The workflow builds
+binaries and installers, creates a GitHub release, publishes to crates.io
+and npm, and updates the Homebrew tap. See the [release checklist](RELEASING.md)
+before pushing a tag.
 
 ## Credits
 

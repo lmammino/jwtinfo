@@ -2,7 +2,9 @@
 
 //! # jwtinfo
 //!
-//! `jwt` is a command line utility and a small library to parse JWT
+//! `jwtinfo` is a command line tool to inspect JWTs and decrypt supported JWEs.
+//! The library parsing API is deprecated since 0.7.0 and in maintenance mode;
+//! the CLI remains supported. JWS signatures and claims are not verified.
 //!
 //! ## Installation
 //!
@@ -32,12 +34,13 @@
 //!
 //! Supported algorithms:
 //!
-//! - Key management (`alg`): `dir`, `RSA-OAEP`, `RSA-OAEP-256`
+//! - Key management (`alg`): `dir`, `RSA-OAEP`, `RSA-OAEP-256`,
+//!   `A128KW`, `A192KW`, `A256KW`
 //! - Content encryption (`enc`): `A128GCM`, `A256GCM`
 //!
 //! The key file can be an RSA private key (PEM/DER/JWK) or a symmetric key
-//! (raw 16/24/32-byte file or `oct` JWK). For `dir` it must contain the raw
-//! content-encryption key (CEK) bytes.
+//! (raw bytes or `oct` JWK). For `dir`, the decoded key must be the
+//! content-encryption key (16 bytes for A128GCM, 32 for A256GCM).
 //!
 //! GCMKW (`A128GCMKW`/`A256GCMKW`) is subject to a known limitation of the
 //! biscuit library, which cannot parse the RFC 7518 base64url `iv`/`tag`
@@ -46,11 +49,19 @@
 //!
 //! ## Programmatic usage
 //!
-//! Install with cargo:
+//! > **Deprecation notice (0.7.0):** jwtinfo is being repositioned as a CLI
+//! > tool: the parsing library API is deprecated and in maintenance mode.
+//! > It remains functional, but it will not gain new features and may be
+//! > removed in a future release. For library JWT parsing, use
+//! > [`biscuit`](https://crates.io/crates/biscuit) or some other JWT
+//! > library ([check jwt.io for suggestions](https://jwt.io/libraries)).
+//!
+//! For existing library consumers, use a versioned dependency and consult
+//! the changelog for the breaking 0.7.0 API changes:
 //!
 //! ```toml
 //! [dependencies]
-//! jwtinfo = "*"
+//! jwtinfo = "0.7"
 //! ```
 //!
 //! Then use it in your code

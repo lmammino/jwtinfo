@@ -55,7 +55,14 @@ impl LoadedKey {
 /// - DER (RSA, PKCS#1 or PKCS#8)
 /// - JWK (JSON Web Key, `kty` of `oct` or `RSA`)
 /// - raw bytes (a symmetric key of 16/24/32 bytes)
+///
+/// Exact raw-key lengths take precedence over text sniffing: arbitrary key
+/// bytes may start with a JSON brace, a PEM prefix, or whitespace. Supported
+/// RSA encodings and JWKs containing usable symmetric keys are longer.
 pub fn load_key(bytes: &[u8]) -> Result<LoadedKey, JweCryptoError> {
+    if matches!(bytes.len(), 16 | 24 | 32) {
+        return Ok(LoadedKey::Symmetric(bytes.to_vec()));
+    }
     let text = String::from_utf8_lossy(bytes);
     let trimmed = text.trim();
 
@@ -65,8 +72,6 @@ pub fn load_key(bytes: &[u8]) -> Result<LoadedKey, JweCryptoError> {
         load_jwk(trimmed)
     } else if let Ok(key) = load_der(bytes) {
         Ok(key)
-    } else if matches!(bytes.len(), 16 | 24 | 32) {
-        Ok(LoadedKey::Symmetric(bytes.to_vec()))
     } else {
         Err(JweCryptoError::InvalidKey(format!(
             "unrecognized key format ({} bytes); expected an RSA key (PEM/DER), a JWK, or a symmetric key of 16/24/32 bytes",

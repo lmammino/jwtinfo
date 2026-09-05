@@ -2,9 +2,9 @@ use aes_gcm::aead::{Aead, Payload};
 use aes_gcm::{Aes128Gcm, Aes256Gcm, Key as AesKey, Nonce};
 use aes_kw::{KeyInit, KwAes128, KwAes192, KwAes256};
 use biscuit::jwa::{ContentEncryptionAlgorithm, KeyManagementAlgorithm};
-use biscuit::jwe::Compact;
+use biscuit::jwe::Compact as JweCompact;
 use biscuit::jwk::JWK;
-use biscuit::Empty;
+use biscuit::{Compact, Empty};
 use rsa::{Oaep, RsaPrivateKey};
 use sha1::Sha1;
 use sha2::Sha256;
@@ -16,6 +16,14 @@ fn aes_kw_unwrap_cek(
     key_encrypted: &[u8],
     cek_len: usize,
 ) -> Result<Vec<u8>, JweCryptoError> {
+    // AES-KW adds an eight-byte integrity register to the CEK. In particular,
+    // reject an integrity register alone before the dependency can unwrap it.
+    if key_encrypted.len() != cek_len + 8 {
+        return Err(JweCryptoError::WrappedCekLengthMismatch {
+            expected: cek_len + 8,
+            actual: key_encrypted.len(),
+        });
+    }
     let mut buf = vec![0u8; cek_len];
     let res = match kek.len() {
         16 => {
@@ -42,8 +50,14 @@ fn aes_kw_unwrap_cek(
             ))
         }
     };
-    res.map_err(|e| JweCryptoError::DecryptionFailed(e.to_string()))?;
-    Ok(buf)
+    let cek = res.map_err(|e| JweCryptoError::DecryptionFailed(e.to_string()))?;
+    if cek.len() != cek_len {
+        return Err(JweCryptoError::CekLengthMismatch {
+            expected: cek_len,
+            actual: cek.len(),
+        });
+    }
+    Ok(cek.to_vec())
 }
 
 pub fn decrypt_aes_kw(
@@ -134,12 +148,14 @@ where
 }
 
 pub fn decrypt_with_biscuit(
-    token_str: &str,
+    compact: &Compact,
     jwk: &JWK<Empty>,
     alg: &str,
     enc: &str,
 ) -> Result<Vec<u8>, JweCryptoError> {
-    let compact: Compact<Vec<u8>, Empty> = Compact::new_encrypted(token_str);
+    // Feed biscuit the parts we already hold (from the single split done at
+    // parse time) instead of a string it would re-split.
+    let compact = JweCompact::<Vec<u8>, Empty>::Encrypted(compact.clone());
     let cek_alg: KeyManagementAlgorithm = parse_alg(alg)?;
     let enc_alg: ContentEncryptionAlgorithm = parse_alg(enc)?;
     let decrypted = compact

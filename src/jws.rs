@@ -3,6 +3,14 @@
 //! `jws` is a collection of utilities to parse JWSs (Json Web Signatures),
 //! the three-part signed JWTs (header.payload.signature)
 //!
+//! > **Deprecation notice (0.7.0):** jwtinfo is being repositioned as a CLI
+//! > tool and this parsing API is deprecated and in maintenance mode. It
+//! > remains functional, but it will not gain new features and may be
+//! > removed in a future release. For library JWT parsing, use
+//! > [`biscuit`](https://crates.io/crates/biscuit) or some other JWT
+//! > library ([check jwt.io for
+//! > suggestions](https://jwt.io/libraries)).
+//!
 //! ## Examples
 //!
 //! To parse a given JWT as a string:
@@ -31,11 +39,11 @@
 //! assert_eq!(token.body.to_string(), "{\"sub\":\"1234567890\",\"name\":\"John Doe\",\"iat\":1516239022}");
 //! ```
 
-use serde_json::Value;
 use std::str;
 
 use crate::jw_error::JwtParseError;
-use crate::jw_error::ParseError;
+// The CLI-oriented internals below consume the deprecated parsing API.
+#[allow(deprecated)]
 use crate::jw_parser::parse_token;
 use crate::jw_parser::JWToken;
 
@@ -50,60 +58,40 @@ pub struct JwsToken {
     pub signature: Vec<u8>,
 }
 
-impl JwsToken {
-    /// Creates a new token from scratch
-    fn new(header: serde_json::Value, body: serde_json::Value, signature: Vec<u8>) -> Self {
-        Self {
-            header,
-            body,
-            signature,
-        }
-    }
-}
-
 impl str::FromStr for JwsToken {
     type Err = JwtParseError;
 
+    // Delegates to the deprecated `parse` to keep the trait working for
+    // existing callers; the trait impl itself cannot carry a deprecation.
+    #[allow(deprecated)]
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         parse(s)
     }
 }
 
-/// Message shown as the body when a JWE token is provided without a key.
-const JWE_PLACEHOLDER: &str = "Detected a JWE token but no private key was provided. Please use the -K/--key flag to decrypt it.";
-
-/// Builds the placeholder shown when a JWE is inspected without a key.
-///
-/// The header is the (already decoded) JWE header; the body is a note
-/// explaining that a key is required to decrypt the payload.
-pub fn jwe_placeholder(header: Value) -> JwsToken {
-    JwsToken::new(
-        header,
-        Value::String(JWE_PLACEHOLDER.to_string()),
-        Vec::new(),
-    )
-}
-
 /// Parses a token from a string.
 ///
 /// For a JWS token, the header and body are decoded and the signature is kept
-/// as bytes. For a JWE token provided without a key, the header is decoded and
-/// the body is replaced with a placeholder message.
+/// as bytes. JWE inputs are rejected with [`JwtParseError::NotAJws`]; use
+/// [`crate::jw_parser::parse_token`] to inspect either token type.
 ///
 /// # Errors
 ///
 /// This function will return a `JwtParseError` if the token cannot be successfully parsed.
+#[deprecated(
+    since = "0.7.0",
+    note = "jwtinfo is being repositioned as a CLI tool and its parsing API is in maintenance mode; \
+            for library JWT parsing, use biscuit or some other JWT library (check https://jwt.io for suggestions)"
+)]
+#[allow(deprecated)] // delegates to the deprecated parse_token
 pub fn parse<T: AsRef<str>>(token: T) -> Result<JwsToken, JwtParseError> {
     let token = token.as_ref();
     match parse_token(token)? {
         JWToken::Jws(t) => Ok(t),
-        JWToken::Jwe(jwe) => {
-            let header: Value = serde_json::from_str(&jwe.header)
-                .map_err(|e| JwtParseError::InvalidHeader(ParseError::InvalidJson(e)))?;
-            Ok(jwe_placeholder(header))
-        }
+        JWToken::Jwe(_) => Err(JwtParseError::NotAJws),
     }
 }
 
 #[cfg(test)]
+#[allow(deprecated)] // the tests exercise the deprecated library API deliberately
 mod test;

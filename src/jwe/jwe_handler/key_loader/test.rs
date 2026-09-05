@@ -1,5 +1,16 @@
 use super::*;
 
+#[test]
+fn raw_key_bytes_are_never_interpreted_as_text() {
+    for len in [16, 24, 32] {
+        for prefix in [b"{".as_slice(), b" \n{", b"-----BEGIN", &[0xff, 0xfe]] {
+            let mut key = vec![0x42; len];
+            key[..prefix.len()].copy_from_slice(prefix);
+            assert_eq!(load_key(&key).unwrap().into_symmetric("dir").unwrap(), key);
+        }
+    }
+}
+
 const RSA_PEM: &[u8] = include_bytes!("../../tests/fixtures/priv_simple_token.pem");
 const RSA_DER: &[u8] = include_bytes!("../../tests/fixtures/priv_simple_token.der");
 const RSA_JWK: &[u8] = include_bytes!("../../tests/fixtures/priv_simple_token.jwk");
@@ -10,10 +21,11 @@ const EC_JWK: &[u8] = include_bytes!("../../tests/fixtures/ec_key.jwk");
 #[test]
 fn raw_bytes_load_as_symmetric() {
     for len in [16usize, 24, 32] {
-        match load_key(&vec![0x42; len]).unwrap() {
-            LoadedKey::Symmetric(bytes) => assert_eq!(bytes.len(), len),
-            LoadedKey::Rsa(_) => panic!("expected a symmetric key"),
-        }
+        let bytes = load_key(&vec![0x42; len])
+            .unwrap()
+            .into_symmetric("dir")
+            .unwrap();
+        assert_eq!(bytes.len(), len);
     }
 }
 
@@ -24,11 +36,8 @@ fn oct_jwk_loads_as_symmetric() {
 
 #[test]
 fn rsa_keys_load_as_rsa() {
-    for (name, bytes) in [("PEM", RSA_PEM), ("DER", RSA_DER), ("JWK", RSA_JWK)] {
-        match load_key(bytes).unwrap() {
-            LoadedKey::Rsa(_) => {}
-            other => panic!("expected an RSA key from the {name} fixture, got {other:?}"),
-        }
+    for bytes in [RSA_PEM, RSA_DER, RSA_JWK] {
+        load_key(bytes).unwrap().into_rsa("RSA-OAEP-256").unwrap();
     }
 }
 
