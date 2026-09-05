@@ -46,6 +46,13 @@
 //!
 //! ## Programmatic usage
 //!
+//! > **Deprecation notice (0.7.0):** jwtinfo is being repositioned as a CLI
+//! > tool: the parsing library API is deprecated and in maintenance mode.
+//! > It remains functional, but it will not gain new features and may be
+//! > removed in a future release. For library JWT parsing, use
+//! > [`biscuit`](https://crates.io/crates/biscuit) or some other JWT
+//! > library ([check jwt.io for suggestions](https://jwt.io/libraries)).
+//!
 //! Install with cargo:
 //!
 //! ```toml
