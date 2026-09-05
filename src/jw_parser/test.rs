@@ -141,6 +141,17 @@ fn empty_header_segment_fails_fast() {
         parse_token("..iv.ct.tag"),
         Err(JwtParseError::InvalidSegment)
     ));
+    // "...." (five empty segments) is where the old code was ugliest: it
+    // leaked a raw serde Debug string ("Error(\"EOF while parsing a value\",
+    // line: 1, column: 0)") out of main. "..a" is its 3-part twin.
+    assert!(matches!(
+        parse_token("...."),
+        Err(JwtParseError::InvalidSegment)
+    ));
+    assert!(matches!(
+        parse_token("..a"),
+        Err(JwtParseError::InvalidSegment)
+    ));
 }
 
 #[test]

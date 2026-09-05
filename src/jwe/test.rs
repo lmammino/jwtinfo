@@ -105,6 +105,19 @@ fn assert_handle_jwe_gcmkw_with_rfc7518_params_reports_limitation() {
 }
 
 #[test]
+fn assert_handle_jwe_accepts_surrounding_whitespace() {
+    // Declared behavior delta: the old implementation forwarded the
+    // untrimmed string to biscuit on the dir/GCMKW path, so a token with
+    // surrounding whitespace failed with a cryptic
+    // Crypto(DecryptionFailed("invalid symbol at ...")) error. Parsing now
+    // trims once and biscuit consumes the shared parts, so whitespace is
+    // tolerated end-to-end.
+    let token = format!(" {}\n", DIR_JWE.trim());
+    let decrypted = handle_jwe(&token, Some(DIR_JWE_CEK.to_vec())).unwrap();
+    assert_eq!(decrypted.payload_string, "super secret dir payload");
+}
+
+#[test]
 fn assert_jwe_token_new_enforces_the_input_contract() {
     // The grammar guarantees a 5-segment shape on the parse_token path;
     // direct callers of JweToken::new must get the same classification
