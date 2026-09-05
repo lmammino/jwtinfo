@@ -15,6 +15,69 @@ const GCMKW_JWE_KEK: &[u8] = include_bytes!("tests/fixtures/gcmkw_kek.key");
 const DIR_JWE: &str = include_str!("tests/fixtures/dir_token.txt");
 const DIR_JWE_CEK: &[u8] = include_bytes!("tests/fixtures/dir_cek.key");
 
+/// Build an authenticated AES-256-GCM token with independently chosen wrapped
+/// key bytes, so invalid key-management inputs still have valid content tags.
+fn aes256_token(header: serde_json::Value, cek: &[u8; 32], wrapped: Vec<u8>) -> String {
+    use aes_gcm::aead::{Aead, KeyInit, Payload};
+    use aes_gcm::{Aes256Gcm, Nonce};
+    let mut compact = biscuit::Compact::default();
+    compact.push(&serde_json::to_vec(&header).unwrap()).unwrap();
+    let iv = [5u8; 12];
+    let encrypted = Aes256Gcm::new_from_slice(cek)
+        .unwrap()
+        .encrypt(
+            &Nonce::from(iv),
+            Payload {
+                msg: b"authenticated test payload",
+                aad: compact.parts[0].as_ref(),
+            },
+        )
+        .unwrap();
+    let boundary = encrypted.len() - 16;
+    for part in [
+        wrapped,
+        iv.to_vec(),
+        encrypted[..boundary].to_vec(),
+        encrypted[boundary..].to_vec(),
+    ] {
+        compact.push(&part).unwrap();
+    }
+    compact.encode()
+}
+
+#[test]
+fn aes_kw_rejects_empty_and_short_unwrapped_keys() {
+    use crate::jw_error::{JweCryptoError, JweError};
+    use aes_kw::{KeyInit, KwAes128};
+    let header = serde_json::json!({"alg": "A128KW", "enc": "A256GCM"});
+    let token = aes256_token(header.clone(), &[0; 32], vec![0xa6; 8]);
+    for byte in [2, 7, 99] {
+        assert!(matches!(
+            handle_jwe(&token, Some(vec![byte; 16])),
+            Err(JweError::Crypto(JweCryptoError::WrappedCekLengthMismatch {
+                expected: 40,
+                actual: 8
+            }))
+        ));
+    }
+    let kek = [2u8; 16];
+    let mut wrapped = [0u8; 24];
+    KwAes128::new_from_slice(&kek)
+        .unwrap()
+        .wrap_key(&[3; 16], &mut wrapped)
+        .unwrap();
+    let mut cek = [0u8; 32];
+    cek[..16].fill(3);
+    let token = aes256_token(header, &cek, wrapped.to_vec());
+    assert!(matches!(
+        handle_jwe(&token, Some(kek.to_vec())),
+        Err(JweError::Crypto(JweCryptoError::WrappedCekLengthMismatch {
+            expected: 40,
+            actual: 24
+        }))
+    ));
+}
+
 #[test]
 fn assert_parse_jwe_header_fields() {
     let token = EXAMPLE_JWE.trim();

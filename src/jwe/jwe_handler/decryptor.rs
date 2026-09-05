@@ -16,6 +16,14 @@ fn aes_kw_unwrap_cek(
     key_encrypted: &[u8],
     cek_len: usize,
 ) -> Result<Vec<u8>, JweCryptoError> {
+    // AES-KW adds an eight-byte integrity register to the CEK. In particular,
+    // reject an integrity register alone before the dependency can unwrap it.
+    if key_encrypted.len() != cek_len + 8 {
+        return Err(JweCryptoError::WrappedCekLengthMismatch {
+            expected: cek_len + 8,
+            actual: key_encrypted.len(),
+        });
+    }
     let mut buf = vec![0u8; cek_len];
     let res = match kek.len() {
         16 => {
@@ -42,8 +50,14 @@ fn aes_kw_unwrap_cek(
             ))
         }
     };
-    res.map_err(|e| JweCryptoError::DecryptionFailed(e.to_string()))?;
-    Ok(buf)
+    let cek = res.map_err(|e| JweCryptoError::DecryptionFailed(e.to_string()))?;
+    if cek.len() != cek_len {
+        return Err(JweCryptoError::CekLengthMismatch {
+            expected: cek_len,
+            actual: cek.len(),
+        });
+    }
+    Ok(cek.to_vec())
 }
 
 pub fn decrypt_aes_kw(
