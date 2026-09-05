@@ -139,6 +139,43 @@ fn dir_rejects_a_nonempty_encrypted_key() {
 }
 
 #[test]
+fn modified_authenticated_content_is_rejected() {
+    use crate::jw_error::{JweCryptoError, JweError};
+    for (token, key) in [
+        (EXAMPLE_JWE, EXAMPLE_JWE_KEY),
+        (AESKW_JWE, AESKW_JWE_KEK_JWK),
+        (DIR_JWE, DIR_JWE_CEK),
+    ] {
+        for index in [0, 2, 3, 4] {
+            let tampered = rewrite_parts(token, |parts| {
+                if index == 0 {
+                    let mut header: serde_json::Value = serde_json::from_slice(&parts[0]).unwrap();
+                    header["kid"] = serde_json::json!("changed after encryption");
+                    parts[0] = serde_json::to_vec(&header).unwrap();
+                } else {
+                    parts[index][0] ^= 1;
+                }
+            });
+            assert!(matches!(
+                handle_jwe(&tampered, Some(key.to_vec())),
+                Err(JweError::Crypto(JweCryptoError::DecryptionFailed(_)))
+            ));
+        }
+    }
+}
+
+#[test]
+fn wrong_symmetric_keys_fail_authentication() {
+    use crate::jw_error::{JweCryptoError, JweError};
+    for (token, key_len) in [(AESKW_JWE, 16), (DIR_JWE, DIR_JWE_CEK.len())] {
+        assert!(matches!(
+            handle_jwe(token, Some(vec![0x42; key_len])),
+            Err(JweError::Crypto(JweCryptoError::DecryptionFailed(_)))
+        ));
+    }
+}
+
+#[test]
 fn unsupported_header_semantics_are_rejected_by_every_backend() {
     use crate::jw_error::{JweCryptoError, JweError};
     for (token, key) in [

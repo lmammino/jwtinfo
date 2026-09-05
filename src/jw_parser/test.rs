@@ -165,15 +165,3 @@ fn jwe_token_carries_raw_form_and_derives_aad() {
     assert_eq!(j.raw(), token);
     assert_eq!(j.aad(), token.split('.').next().unwrap().as_bytes());
 }
-
-#[test]
-#[should_panic(expected = "expected a JWS token, got Jwe")]
-fn expect_jws_rejects_a_jwe() {
-    parse_token(TEST_JWE.trim()).unwrap().expect_jws();
-}
-
-#[test]
-#[should_panic(expected = "expected a JWE token, got Jws")]
-fn expect_jwe_rejects_a_jws() {
-    parse_token(TEST_JWS).unwrap().expect_jwe();
-}

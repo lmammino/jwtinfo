@@ -159,10 +159,7 @@ pub fn parse_jwe(token_str: &str) -> Result<JweToken, JwtParseError> {
     }
 }
 
-/// Test-support helpers: unwrap a specific `JWToken` variant. The panicking
-/// arms are exercised by `expect_jws_rejects_a_jwe` and
-/// `expect_jwe_rejects_a_jws`, so coverage tools see both arms of each match
-/// instead of an uncovered `let ... else { panic!() }` region per test.
+/// Assertions used by parser tests to extract the expected token type.
 #[cfg(test)]
 impl JWToken {
     fn expect_jws(self) -> JwsToken {

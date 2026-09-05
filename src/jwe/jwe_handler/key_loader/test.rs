@@ -21,7 +21,10 @@ const EC_JWK: &[u8] = include_bytes!("../../tests/fixtures/ec_key.jwk");
 #[test]
 fn raw_bytes_load_as_symmetric() {
     for len in [16usize, 24, 32] {
-        let bytes = load_key(&vec![0x42; len]).unwrap().expect_symmetric();
+        let bytes = load_key(&vec![0x42; len])
+            .unwrap()
+            .into_symmetric("dir")
+            .unwrap();
         assert_eq!(bytes.len(), len);
     }
 }
@@ -34,7 +37,7 @@ fn oct_jwk_loads_as_symmetric() {
 #[test]
 fn rsa_keys_load_as_rsa() {
     for bytes in [RSA_PEM, RSA_DER, RSA_JWK] {
-        load_key(bytes).unwrap().expect_rsa();
+        load_key(bytes).unwrap().into_rsa("RSA-OAEP-256").unwrap();
     }
 }
 
@@ -87,16 +90,4 @@ fn key_type_mismatches_are_reported() {
         err.to_string(),
         "Invalid key: A128KW requires a symmetric key, but the key file contains an RSA private key"
     );
-}
-
-#[test]
-#[should_panic(expected = "expected a symmetric key, got Rsa")]
-fn expect_symmetric_rejects_an_rsa_key() {
-    load_key(RSA_PEM).unwrap().expect_symmetric();
-}
-
-#[test]
-#[should_panic(expected = "expected an RSA private key, got Symmetric")]
-fn expect_rsa_rejects_a_symmetric_key() {
-    load_key(&[0x42; 16]).unwrap().expect_rsa();
 }

@@ -142,24 +142,3 @@ fn load_jwk(text: &str) -> Result<LoadedKey, JweCryptoError> {
 
 #[cfg(test)]
 mod test;
-
-/// Test-support helpers: unwrap a specific `LoadedKey` variant. The
-/// panicking arms are exercised by `expect_symmetric_rejects_an_rsa_key`
-/// and `expect_rsa_rejects_a_symmetric_key`, so coverage tools see both
-/// arms of each match instead of an uncovered inline panic region per test.
-#[cfg(test)]
-impl LoadedKey {
-    fn expect_symmetric(self) -> Vec<u8> {
-        match self {
-            LoadedKey::Symmetric(bytes) => bytes,
-            other => panic!("expected a symmetric key, got {other:?}"),
-        }
-    }
-
-    fn expect_rsa(self) -> RsaPrivateKey {
-        match self {
-            LoadedKey::Rsa(key) => *key,
-            other => panic!("expected an RSA private key, got {other:?}"),
-        }
-    }
-}
