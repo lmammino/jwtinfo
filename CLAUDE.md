@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-jwtinfo is a Rust command-line tool and library for parsing JWT (JSON Web Tokens). It extracts and displays the header and body of JWTs without verification.
+jwtinfo is a Rust command-line tool for inspecting JWTs and decrypting supported JWEs. The library parsing API is deprecated since 0.7.0. JWS signatures and claims are not verified.
 
 ## Architecture
 
@@ -57,15 +57,12 @@ cargo run -- --pretty <jwt_token>     # Pretty print output
 
 ### Coverage (Development)
 
-Coverage requires Rust nightly and grcov:
+Coverage uses cargo-llvm-cov, matching CI:
 
 ```bash
-rustup install nightly
-cargo install grcov
-export CARGO_INCREMENTAL=0
-export RUSTFLAGS="-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Zno-landing-pads"
-cargo +nightly test
-grcov ./target/debug/ -s . -t html --llvm --branch --ignore-not-existing -o ./target/debug/coverage/
+rustup component add llvm-tools-preview
+cargo install cargo-llvm-cov --locked
+cargo llvm-cov --all-features --workspace --html
 ```
 
 ### Nix Development
