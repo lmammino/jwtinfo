@@ -1,12 +1,13 @@
-use assert_cmd::Command;
+use assert_cmd::cargo::*;
 use predicates::prelude::*;
 
 const TEST_JWT: &str = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmb28iOiJiYXIifQ.dtxWM6MIcgoeMgH87tGvsNDY6cHWL6MGW4LeYvnm1JA";
-const TEST_JWE: &str = "eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkEyNTZDQkMtSFM1MTIiLCJraWQiOiIxOGIxY2Y3NThjMWQ0ZWM2YmRhNjU4OTM1N2FiZGQ4NSIsInR5cCI6IkpXVCIsImN0eSI6IkpXVCJ9.gCbxP78o3DgpDTUQbuHniuGgYpATqgGkRGy7paC6hRrz7N7eIa6sAOWDO9Fhnj-c8ocMl4cF4Jb_mv5qRPCh9r57PBqx7jOhMIMPTwJGpjcyBaqtHlZlu1vupY5tQ3Y2jGz1Ti4BnywaeEHPyIPQJtN7F7hIAORzj7IY4sIKkVXtQJZgaKW8pEHq_GCqj8i5aaiM0uJnRG3GOh3livp9Npjv9doqp3gyPa1zjrg2H1RsOGn0j2QMGvtuVfkuNwF-SoPKFECyHOq0ZK1oH2sTO8-JwvHflbIZQr5xWTpS8q7MbUXEuqURtrg0Tj-2z6tdaOLT4b3UeDufK2ar3bBfRD4-nRALtoY0ekcMyGFOS7o1Mxl3hy5sIG-EySyWeuBVy68aDWDpi9qZoQuY1TbxxakjncCOGu_Gh1l1m_mK2l_IdyXCT_GCfzFq4ZTkPZ5eydNBAPZuxBLUb4BrMb5iDdZjT7AgGOlRre_wIRHmmKm8W9nDeQQRmbIXO23JuOw9.BDCarfq2r_Uk8DHNfsNwSQ.4DuQx1cfJXadHnudrVaBss45zxyd6iouuSzZUyOeM4ikF_7hDOgwmaCma-Z97_QZBJ5DzVn9SJhKUTAqpVR3BRGAxJ_HAXU5jaTjXqbvUaxsh7Z5TgZ9eck0FIoe1lkwv51xEvYqqQ_Xojr4MAEmLuME_9ArCK9mNaMADIzOj4VoQtaDP1l26ytocc-oENifBRYGu28LbJLkyQKzyQy6FuAOtWjLM0WCXV7-o_dvj6qfeYHNBD7YBSxyqdgD8dcxMBNd2sK73YsZPHEa0V1-8zz7hm3bH3tZelpwPWScqLLW_SUH586c0FVeI6ggvqzjfLZ_Y6eQibVSdXfOtJBk22QrLsuCXbRK8G1w9t23Pwu8ukUAw4v0l7HeaW_0SJyKSPQANRP83MyFbK7fmzTYaW9TYN2JrKN-PLpd2dIFSm2Ga_EfaCwNJBm4RDMzDNrf-O0AissvYyHb0WaALiCiFCogliYqLzRB6xDb-b4964M.J7WDOFLRRPJ7lLpTfN2mOiXLDg5xtaF-sLQ4mOeN5oc";
+const TEST_JWE: &str = include_str!("../src/jwe/tests/fixtures/simple_token.txt");
+const TEST_JWE_DECRYPTED: &str = "This is a super secret message!";
 
 #[test]
 fn test_default_shows_body() {
-    let mut cmd = Command::cargo_bin("jwtinfo").unwrap();
+    let mut cmd = cargo_bin_cmd!("jwtinfo");
     cmd.arg(TEST_JWT)
         .assert()
         .success()
@@ -15,7 +16,7 @@ fn test_default_shows_body() {
 
 #[test]
 fn test_header_flag_shows_header() {
-    let mut cmd = Command::cargo_bin("jwtinfo").unwrap();
+    let mut cmd = cargo_bin_cmd!("jwtinfo");
     cmd.arg("--header")
         .arg(TEST_JWT)
         .assert()
@@ -25,7 +26,7 @@ fn test_header_flag_shows_header() {
 
 #[test]
 fn test_full_flag_shows_both_header_and_claims() {
-    let mut cmd = Command::cargo_bin("jwtinfo").unwrap();
+    let mut cmd = cargo_bin_cmd!("jwtinfo");
     cmd.arg("--full")
         .arg(TEST_JWT)
         .assert()
@@ -38,7 +39,7 @@ fn test_full_flag_shows_both_header_and_claims() {
 
 #[test]
 fn test_full_flag_with_pretty() {
-    let mut cmd = Command::cargo_bin("jwtinfo").unwrap();
+    let mut cmd = cargo_bin_cmd!("jwtinfo");
     cmd.arg("--full")
         .arg("--pretty")
         .arg(TEST_JWT)
@@ -52,7 +53,7 @@ fn test_full_flag_with_pretty() {
 
 #[test]
 fn test_full_and_header_flags_conflict() {
-    let mut cmd = Command::cargo_bin("jwtinfo").unwrap();
+    let mut cmd = cargo_bin_cmd!("jwtinfo");
     cmd.arg("--full")
         .arg("--header")
         .arg(TEST_JWT)
@@ -63,7 +64,7 @@ fn test_full_and_header_flags_conflict() {
 
 #[test]
 fn test_pretty_flag_formats_output() {
-    let mut cmd = Command::cargo_bin("jwtinfo").unwrap();
+    let mut cmd = cargo_bin_cmd!("jwtinfo");
     cmd.arg("--pretty")
         .arg(TEST_JWT)
         .assert()
@@ -73,7 +74,7 @@ fn test_pretty_flag_formats_output() {
 
 #[test]
 fn test_stdin_input() {
-    let mut cmd = Command::cargo_bin("jwtinfo").unwrap();
+    let mut cmd = cargo_bin_cmd!("jwtinfo");
     cmd.arg("-")
         .write_stdin(TEST_JWT)
         .assert()
@@ -83,16 +84,16 @@ fn test_stdin_input() {
 
 #[test]
 fn test_invalid_jwt_returns_error() {
-    let mut cmd = Command::cargo_bin("jwtinfo").unwrap();
+    let mut cmd = cargo_bin_cmd!("jwtinfo");
     cmd.arg("invalid.jwt.token")
         .assert()
         .failure()
-        .stderr(predicate::str::contains("Error:"));
+        .stderr(predicate::str::contains("Invalid Header"));
 }
 
 #[test]
 fn test_full_flag_structure() {
-    let mut cmd = Command::cargo_bin("jwtinfo").unwrap();
+    let mut cmd = cargo_bin_cmd!("jwtinfo");
     let output = cmd.arg("--full").arg(TEST_JWT).output().unwrap();
 
     let stdout = String::from_utf8(output.stdout).unwrap();
@@ -114,43 +115,258 @@ fn test_full_flag_structure() {
 // JWE (encrypted JWT) tests
 #[test]
 fn test_jwe_shows_encrypted_message() {
-    let mut cmd = Command::cargo_bin("jwtinfo").unwrap();
+    let mut cmd = cargo_bin_cmd!("jwtinfo");
     cmd.arg(TEST_JWE)
         .assert()
         .success()
-        .stdout(predicate::str::contains("<encrypted JWE body>"));
+        .stdout(predicate::str::contains(
+            "Detected a JWE token but no private key was provided",
+        ));
 }
 
 #[test]
 fn test_jwe_header_flag_shows_header() {
-    let mut cmd = Command::cargo_bin("jwtinfo").unwrap();
+    let mut cmd = cargo_bin_cmd!("jwtinfo");
     cmd.arg("--header")
         .arg(TEST_JWE)
         .assert()
         .success()
-        .stdout(predicate::str::contains(r#""enc":"A256CBC-HS512""#))
-        .stdout(predicate::str::contains(r#""alg":"RSA-OAEP""#));
+        .stdout(predicate::str::contains(r#""enc":"A256GCM""#))
+        .stdout(predicate::str::contains(r#""alg":"RSA-OAEP-256""#));
 }
 
 #[test]
 fn test_jwe_full_flag_shows_header_and_encrypted_message() {
-    let mut cmd = Command::cargo_bin("jwtinfo").unwrap();
+    let mut cmd = cargo_bin_cmd!("jwtinfo");
     cmd.arg("--full")
         .arg(TEST_JWE)
         .assert()
         .success()
         .stdout(predicate::str::contains(r#""header":"#))
         .stdout(predicate::str::contains(r#""claims":"#))
-        .stdout(predicate::str::contains(r#""enc":"A256CBC-HS512""#))
-        .stdout(predicate::str::contains("<encrypted JWE body>"));
+        .stdout(predicate::str::contains(r#""enc":"A256GCM""#))
+        .stdout(predicate::str::contains(
+            "Detected a JWE token but no private key was provided",
+        ));
 }
 
 #[test]
 fn test_jwe_pretty_flag() {
-    let mut cmd = Command::cargo_bin("jwtinfo").unwrap();
+    let mut cmd = cargo_bin_cmd!("jwtinfo");
     cmd.arg("--pretty")
         .arg(TEST_JWE)
         .assert()
         .success()
-        .stdout(predicate::str::contains("<encrypted JWE body>"));
+        .stdout(predicate::str::contains(
+            "Detected a JWE token but no private key was provided",
+        ));
+}
+
+#[test]
+fn test_jwe_with_key_decrypts_payload() {
+    let mut cmd = cargo_bin_cmd!("jwtinfo");
+    let key_path = format!(
+        "{}/src/jwe/tests/fixtures/priv_simple_token.pem",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    cmd.arg("--key")
+        .arg(key_path)
+        .arg(TEST_JWE)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(TEST_JWE_DECRYPTED));
+}
+
+const TEST_NESTED_JWE: &str = include_str!("../src/jwe/tests/fixtures/jwe_nested_token.txt");
+const TEST_NESTED_JWE_KEY: &str = "src/jwe/tests/fixtures/priv_key_nested_jwt.pem";
+
+#[test]
+fn test_nested_jwe_default_shows_inner_claims() {
+    let mut cmd = cargo_bin_cmd!("jwtinfo");
+    cmd.arg("--key")
+        .arg(TEST_NESTED_JWE_KEY)
+        .arg(TEST_NESTED_JWE)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(r#""iss":"mittente""#))
+        .stdout(predicate::str::contains(
+            r#""msg":"Questo e' un messaggio super segreto!""#,
+        ));
+}
+
+#[test]
+fn test_nested_jwe_header_flag_shows_both_headers() {
+    let mut cmd = cargo_bin_cmd!("jwtinfo");
+    cmd.arg("--key")
+        .arg(TEST_NESTED_JWE_KEY)
+        .arg("--header")
+        .arg(TEST_NESTED_JWE)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(r#""jwe_header":"#))
+        .stdout(predicate::str::contains(r#""jws_header":"#))
+        .stdout(predicate::str::contains(r#""alg":"HS256""#));
+}
+
+#[test]
+fn test_nested_jwe_full_flag_shows_complete_structure() {
+    let mut cmd = cargo_bin_cmd!("jwtinfo");
+    cmd.arg("--key")
+        .arg(TEST_NESTED_JWE_KEY)
+        .arg("--full")
+        .arg(TEST_NESTED_JWE)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(r#""jwe_header":"#))
+        .stdout(predicate::str::contains(r#""jws_header":"#))
+        .stdout(predicate::str::contains(r#""claims":"#))
+        .stdout(predicate::str::contains(r#""iss":"mittente""#));
+}
+
+// Flag handling on decrypted JWE with a plaintext (non-JWT) payload.
+#[test]
+fn test_jwe_with_key_header_flag_shows_jwe_header() {
+    let mut cmd = cargo_bin_cmd!("jwtinfo");
+    let key_path = format!(
+        "{}/src/jwe/tests/fixtures/priv_simple_token.pem",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    cmd.arg("--header")
+        .arg("--key")
+        .arg(key_path)
+        .arg(TEST_JWE)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(r#""enc":"A256GCM""#))
+        .stdout(predicate::str::contains(r#""alg":"RSA-OAEP-256""#))
+        .stdout(predicate::str::contains(r#""typ":"JWE""#));
+}
+
+#[test]
+fn test_jwe_with_key_full_shows_header_and_payload() {
+    let mut cmd = cargo_bin_cmd!("jwtinfo");
+    let key_path = format!(
+        "{}/src/jwe/tests/fixtures/priv_simple_token.pem",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    cmd.arg("--full")
+        .arg("--key")
+        .arg(key_path)
+        .arg(TEST_JWE)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(r#""header":"#))
+        .stdout(predicate::str::contains(r#""payload":"#))
+        .stdout(predicate::str::contains(TEST_JWE_DECRYPTED));
+}
+
+#[test]
+fn test_jwe_with_key_pretty_header_flag() {
+    let mut cmd = cargo_bin_cmd!("jwtinfo");
+    let key_path = format!(
+        "{}/src/jwe/tests/fixtures/priv_simple_token.pem",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    cmd.arg("--pretty")
+        .arg("--header")
+        .arg("--key")
+        .arg(key_path)
+        .arg(TEST_JWE)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(r#""alg": "RSA-OAEP-256""#))
+        .stdout(predicate::str::contains(r#""enc": "A256GCM""#));
+}
+
+// A JWS token passed with --key must warn on stderr but still succeed.
+#[test]
+fn test_jws_with_key_warns_and_still_works() {
+    let mut cmd = cargo_bin_cmd!("jwtinfo");
+    let key_path = format!(
+        "{}/src/jwe/tests/fixtures/priv_simple_token.pem",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    cmd.arg("--key")
+        .arg(key_path)
+        .arg(TEST_JWT)
+        .assert()
+        .success()
+        .stderr(predicate::str::contains(
+            "the --key flag is only applicable to JWE tokens",
+        ))
+        .stdout(predicate::str::contains(r#"{"foo":"bar"}"#));
+}
+
+// Empty base64url segments are legitimate:
+// - unsecured JWTs (RFC 7518 §3, alg: none) have an empty signature;
+// - dir JWEs (RFC 7516 §4.5) have an empty encrypted-key segment.
+#[test]
+fn test_alg_none_jws_with_empty_signature_segment() {
+    let mut cmd = cargo_bin_cmd!("jwtinfo");
+    cmd.arg("eyJhbGciOiJub25lIn0.eyJmb28iOiJiYXIifQ.")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("{\"foo\":\"bar\"}"));
+}
+
+#[test]
+fn test_dir_jwe_with_empty_key_segment_decrypts() {
+    let mut cmd = cargo_bin_cmd!("jwtinfo");
+    let key_path = format!(
+        "{}/src/jwe/tests/fixtures/dir_cek.key",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    let token = include_str!("../src/jwe/tests/fixtures/dir_token.txt");
+    cmd.arg("--key")
+        .arg(key_path)
+        .arg(token.trim())
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("super secret dir payload"));
+}
+
+#[test]
+fn test_invalid_token_prints_error_once() {
+    // Regression test: main() used to return the error after eprintln-ing
+    // it, so the Termination impl printed it a second time in Debug form.
+    let mut cmd = cargo_bin_cmd!("jwtinfo");
+    let output = cmd.arg("a.b.c.d").output().unwrap();
+    assert!(!output.status.success());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("expected 3 parts (JWS) or 5 parts (JWE) but found 4"));
+    assert_eq!(
+        stderr.matches("Error:").count(),
+        1,
+        "the error must be reported exactly once, stderr was: {stderr}"
+    );
+}
+
+#[test]
+fn test_wrong_key_type_reports_clear_error() {
+    // A symmetric key file cannot decrypt an RSA-OAEP-256 token: the error
+    // must say what the algorithm requires and what the file contains.
+    let mut cmd = cargo_bin_cmd!("jwtinfo");
+    let key_path = format!(
+        "{}/src/jwe/tests/fixtures/dir_cek.key",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    cmd.arg("--key")
+        .arg(key_path)
+        .arg(TEST_JWE)
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains(
+            "RSA-OAEP-256 requires an RSA private key, but the key file contains a symmetric key",
+        ));
+}
+
+#[test]
+fn test_jwe_without_key_shows_placeholder() {
+    let mut cmd = cargo_bin_cmd!("jwtinfo");
+    cmd.arg(TEST_JWE)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(
+            "Detected a JWE token but no private key was provided",
+        ));
 }

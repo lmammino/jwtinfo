@@ -1,14 +1,23 @@
+use jwtinfo::{
+    jw_output::{stringify, DisplayOptions},
+    jw_parser::{parse_token, JWToken},
+    jws,
+};
+
 use clap::{Arg, ArgAction, Command};
-use jwtinfo::jwt;
-use serde_json::to_string_pretty;
-use std::io::{self, Read};
-use std::process;
+use jwtinfo::jwe::decrypt_jwe;
+use serde_json::Value;
+use std::{
+    error::Error,
+    fs,
+    io::{self, Read},
+};
 
 #[doc(hidden)]
-fn main() -> io::Result<()> {
-    let matches = Command::new("jwtinfo")
+fn main() -> Result<(), Box<dyn Error>> {
+    let mut matches = Command::new("jwtinfo")
         .version(env!("CARGO_PKG_VERSION"))
-        .about("Shows information about a JWT (Json Web Token)")
+        .about("Shows information about a JWT (JSON Web Token)")
         .args([
             Arg::new("header")
                 .short('H')
@@ -31,55 +40,67 @@ fn main() -> io::Result<()> {
                 .index(1)
                 .allow_hyphen_values(true)
                 .required(true)
-                .help("the JWT as a string (use \"-\" to read from stdin)"),
+                .help("the JWT/JWE as a string (use \"-\" to read from stdin)"),
+            Arg::new("key")
+                .short('K')
+                .long("key")
+                .help("path to the key file (PEM/DER/JWK or raw bytes) to decrypt a JWE"),
         ])
         .get_matches();
 
-    let should_pretty_print = matches.get_flag("pretty");
-
-    let mut token = matches.get_one::<String>("token").unwrap().clone();
+    let opts = DisplayOptions {
+        full: matches.get_flag("full"),
+        pretty: matches.get_flag("pretty"),
+        header: matches.get_flag("header"),
+    };
+    let mut token = matches.remove_one::<String>("token").unwrap();
     let mut buffer = String::new();
 
     // if the token is "-" read it from stdin
     if token == "-" {
         io::stdin().read_to_string(&mut buffer)?;
-        token = (*buffer.trim()).to_string();
+        token = (buffer.trim()).to_string();
     }
 
-    let jwt_token = match jwt::parse(token) {
-        Ok(t) => t,
+    match parse_token(&token) {
+        Ok(JWToken::Jws(t)) => {
+            // The --key flag is only meaningful for JWE tokens.
+            if matches.get_one::<String>("key").is_some() {
+                eprintln!("Warning: the --key flag is only applicable to JWE tokens; ignoring it");
+            }
+            println!("{}", stringify(None, t, opts));
+            Ok(())
+        }
+        Ok(JWToken::Jwe(jwe)) => {
+            if let Some(key_path) = matches.get_one::<String>("key") {
+                // Decrypt and render. If the payload is a nested JWT we show the
+                // outer JWE header together with the inner JWS; otherwise the
+                // flags apply to the JWE header and the raw plaintext.
+                let key = Some(fs::read(key_path)?);
+                let decrypted = decrypt_jwe(&jwe, &token, key)?;
+                let jwe_header: Value = serde_json::from_str(&jwe.header)?;
+                let output = if decrypted.is_jwt_body {
+                    let content = jws::parse(&decrypted.payload_string)?;
+                    stringify(Some(jwe_header), content, opts)
+                } else {
+                    stringify(Some(jwe_header), decrypted.payload_string, opts)
+                };
+                println!("{}", output);
+                Ok(())
+            } else {
+                // No key: render the JWE header with a placeholder body.
+                let jwe_header: Value = serde_json::from_str(&jwe.header)?;
+                let t = jws::jwe_placeholder(jwe_header);
+                println!("{}", stringify(None, t, opts));
+                Ok(())
+            }
+        }
         Err(e) => {
             eprintln!("Error: {}", e);
-            process::exit(1);
+            // The error has already been reported: exit directly instead of
+            // returning it from `main`, which would make the runtime print it
+            // a second time (in Debug form).
+            std::process::exit(1);
         }
-    };
-
-    let stringified = if matches.get_flag("full") {
-        // Show both header and claims
-        let full_output = serde_json::json!({
-            "header": jwt_token.header,
-            "claims": jwt_token.body
-        });
-        if should_pretty_print {
-            to_string_pretty(&full_output)?
-        } else {
-            full_output.to_string()
-        }
-    } else {
-        // Show either header or body
-        let part = if matches.get_flag("header") {
-            jwt_token.header
-        } else {
-            jwt_token.body
-        };
-        if should_pretty_print {
-            to_string_pretty(&part)?
-        } else {
-            part.to_string()
-        }
-    };
-
-    println!("{}", stringified);
-
-    Ok(())
+    }
 }

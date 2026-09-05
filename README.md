@@ -15,17 +15,19 @@ A command line tool to get information about
 ## Features
 
 ### CLI Tool
+
 - **Decode JWT tokens** without verification - quickly inspect header and claims
 - **Multiple display modes**: view body only (default), header only (`--header`), or both (`--full`)
 - **Pretty printing** with `--pretty` flag for readable JSON output
 - **Stdin support** - pipe tokens directly or use as command argument
-- **JWE token detection** - gracefully handles encrypted JWT tokens with clear messaging
+- **JWE decryption** - decrypt encrypted JWTs with `--key` (supports `dir`, `RSA-OAEP`, `RSA-OAEP-256` + `A128GCM`/`A256GCM`)
 - **Composable** - works seamlessly with tools like `jq` for advanced JSON processing
 
 ### Rust Library
-- **Simple parsing API** - `jwt::parse()` function for easy token decoding
+
+- **Simple parsing API** - `jws::parse()` function for easy token decoding
 - **Type-safe access** - header and body exposed as `serde_json::Value`
-- **FromStr implementation** - parse tokens using `.parse::<jwt::Token>()`
+- **FromStr implementation** - parse tokens using `.parse::<jws::JwsToken>()`
 - **No verification** - focused on inspection and debugging, not validation
 - **JWE support** - detects encrypted tokens and handles them appropriately
 
@@ -70,7 +72,10 @@ jwtinfo --full eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwi
 Which will print:
 
 ```json
-{"header":{"alg":"HS256","typ":"JWT"},"claims":{"sub":"1234567890","name":"John Doe","iat":1516239022}}
+{
+    "header": { "alg": "HS256", "typ": "JWT" },
+    "claims": { "sub": "1234567890", "name": "John Doe", "iat": 1516239022 }
+}
 ```
 
 For better readability, you can combine `--full` with the `--pretty` flag to
@@ -84,15 +89,15 @@ Which will print:
 
 ```json
 {
-  "header": {
-    "alg": "HS256",
-    "typ": "JWT"
-  },
-  "claims": {
-    "sub": "1234567890",
-    "name": "John Doe",
-    "iat": 1516239022
-  }
+    "header": {
+        "alg": "HS256",
+        "typ": "JWT"
+    },
+    "claims": {
+        "sub": "1234567890",
+        "name": "John Doe",
+        "iat": 1516239022
+    }
 }
 ```
 
@@ -103,8 +108,49 @@ You can combine the tool with other command line utilities, for instance
 jwtinfo eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c | jq .
 ```
 
+### JWE decryption
+
+If the token is encrypted (JWE), and you own the decryption key, you can see the decrypted payload by providing the key file:
+
+```bash
+jwtinfo --key /path/to/private.pem "$(cat /path/to/jwe.txt)"
+```
+
+Supported algorithms:
+
+- **Key management (`alg`)**: `dir`, `RSA-OAEP`, `RSA-OAEP-256`, `A128KW`, `A192KW`, `A256KW`
+- **Content encryption (`enc`)**: `A128GCM`, `A256GCM`
+
+> [!IMPORTANT]
+> **Known limitation — AES-GCM Key Wrap (`A128GCMKW` / `A256GCMKW`)**: GCMKW decryption is delegated to the [`biscuit`](https://crates.io/crates/biscuit) library, which expects the GCMKW `iv` and `tag` protected-header parameters as JSON *byte arrays*, while [RFC 7518 §4.7](https://datatracker.ietf.org/doc/html/rfc7518#section-4.7) defines them as base64url *strings*. As a result, only tokens produced by `biscuit` itself can be decrypted; standards-compliant tokens (as produced by most JOSE libraries) are detected up front and rejected with a clear error.
+
+Not yet supported: `RSA1_5`, `ECDH-ES` (+KW variants), `PBES2-*` (password-based encryption), the `A192GCM`/`A192GCMKW` variants, and the `A128CBC-HS256`/`A192CBC-HS384`/`A256CBC-HS512` content-encryption family.
+
+Supported key formats (auto-detected):
+
+- **PEM**: an RSA private key (`PKCS#1` or `PKCS#8`)
+- **DER**: the binary equivalents of the above
+- **JWK**: a JSON Web Key file (`kty` of `RSA` or `oct`)
+- **Raw bytes**: symmetric keys of 16/24/32 bytes (for `dir`, `AES-KW`, `GCMKW`)
+
+Any format works for any algorithm: the key material is parsed once and matched
+against the token's `alg` (an RSA private key for `RSA-OAEP`/`RSA-OAEP-256`, a
+symmetric key for `dir`, `AES-KW` and `GCMKW`).
+For `dir`, the key file must contain the raw content-encryption key (CEK) bytes;
+for `AES-KW` and `GCMKW` it must contain the key-encryption key (KEK).
+EC and OKP (EdDSA) keys are not supported, as no supported JWE algorithm can use them.
+
 > [!NOTE]
-> **Encrypted [JWE](https://datatracker.ietf.org/doc/html/rfc7516) Tokens**: If you provide an encrypted JWE token (JSON Web Encryption), the tool will detect it by checking for the `enc` field in the header. Since JWE tokens are encrypted, the claims/body cannot be read without decryption. In this case, `jwtinfo` will display the special placeholder string `"<encrypted JWE body>"` instead of the actual claims. The header can still be inspected normally using the `--header` flag.
+> **Encrypted [JWE](https://datatracker.ietf.org/doc/html/rfc7516) Tokens**: If you provide an encrypted JWE token without a key, `jwtinfo` will show a placeholder message indicating that a private key is required. Use `-K/--key` to decrypt it. The header can still be inspected normally using the `--header` flag.
+
+### Display flags and token types
+
+The display flags (`--header`, `--full`, `--pretty`) apply to whichever token is being shown, including the decrypted payload:
+
+- **JWS token**: `--header` shows the header, `--full` shows `{header, claims}`.
+- **JWE with a plaintext (non-JWT) payload**: `--header` shows the JWE header, `--full` shows `{header, payload}`. Without any flag the raw plaintext is printed.
+- **JWE wrapping a nested JWT** (via the `cty: "JWT"` header): `--header` shows both headers as `{jwe_header, jws_header}`, `--full` shows `{jwe_header, jws_header, claims}`.
+- **`--key` on a JWS token**: a warning is printed on stderr and the flag is ignored, but the JWS is still decoded normally.
 
 ## Install
 
@@ -186,7 +232,7 @@ flake:
 ```nix
 jwtinfo = {
     url = "github:lmammino/jwtinfo";
-    inputs.nixpkgs.follows = "nixpkgs"; 
+    inputs.nixpkgs.follows = "nixpkgs";
 };
 
 # ... with home.nix
@@ -229,20 +275,20 @@ jwtinfo = "*"
 Then use it in your code:
 
 ```rust
-use jwtinfo::{jwt};
+use jwtinfo::{jws};
 let token_str = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
-let token = jwt::parse(token_str).unwrap();
+let token = jws::parse(token_str).unwrap();
 assert_eq!(token.header.to_string(), "{\"alg\":\"HS256\",\"typ\":\"JWT\"}");
-assert_eq!(token.body.to_string(), "{\"iat\":1516239022,\"name\":\"John Doe\",\"sub\":\"1234567890\"}");
+assert_eq!(token.body.to_string(), "{\"sub\":\"1234567890\",\"name\":\"John Doe\",\"iat\":1516239022}");
 ```
 
-Since `jwt::Token` implements `str::FromStr`, you can also do the following:
+Since `jws::JwsToken` implements `str::FromStr`, you can also do the following:
 
 ```rust
-use jwtinfo::{jwt};
-let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c".parse::<jwt::Token>().unwrap();
+use jwtinfo::{jws};
+let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c".parse::<jws::JwsToken>().unwrap();
 assert_eq!(token.header.to_string(), "{\"alg\":\"HS256\",\"typ\":\"JWT\"}");
-assert_eq!(token.body.to_string(), "{\"iat\":1516239022,\"name\":\"John Doe\",\"sub\":\"1234567890\"}");
+assert_eq!(token.body.to_string(), "{\"sub\":\"1234567890\",\"name\":\"John Doe\",\"iat\":1516239022}");
 ```
 
 ## Coverage reports
