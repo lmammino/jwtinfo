@@ -175,6 +175,27 @@ pub fn parse_jwe(token_str: &str) -> Result<JweToken, JwtParseError> {
     }
 }
 
+/// Test-support helpers: unwrap a specific `JWToken` variant. The panicking
+/// arms are exercised by `expect_jws_rejects_a_jwe` and
+/// `expect_jwe_rejects_a_jws`, so coverage tools see both arms of each match
+/// instead of an uncovered `let ... else { panic!() }` region per test.
+#[cfg(test)]
+impl JWToken {
+    fn expect_jws(self) -> JwsToken {
+        match self {
+            JWToken::Jws(t) => t,
+            other => panic!("expected a JWS token, got {other:?}"),
+        }
+    }
+
+    fn expect_jwe(self) -> JweToken {
+        match self {
+            JWToken::Jwe(j) => j,
+            other => panic!("expected a JWE token, got {other:?}"),
+        }
+    }
+}
+
 #[cfg(test)]
 #[allow(deprecated)] // the tests exercise the deprecated library API deliberately
 mod test;

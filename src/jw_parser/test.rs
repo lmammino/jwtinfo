@@ -6,9 +6,7 @@ const TEST_JWE: &str = include_str!("../jwe/tests/fixtures/simple_token.txt");
 
 #[test]
 fn jws_3_parts_produces_jws_token() {
-    let JWToken::Jws(t) = parse_token(TEST_JWS).unwrap() else {
-        panic!("expected Jws")
-    };
+    let t = parse_token(TEST_JWS).unwrap().expect_jws();
     assert_eq!(t.header["alg"], "HS256");
     assert_eq!(t.header["typ"], "JWT");
     assert_eq!(t.body["foo"], "bar");
@@ -17,9 +15,7 @@ fn jws_3_parts_produces_jws_token() {
 
 #[test]
 fn jwe_5_parts_produces_jwe_token() {
-    let JWToken::Jwe(j) = parse_token(TEST_JWE.trim()).unwrap() else {
-        panic!("expected Jwe")
-    };
+    let j = parse_token(TEST_JWE.trim()).unwrap().expect_jwe();
     assert!(j.header.contains("A256GCM"));
     assert_eq!(j.iv.len(), 12);
     assert_eq!(j.tag.len(), 16);
@@ -87,9 +83,7 @@ fn empty_input_is_rejected() {
 fn empty_signature_segment_is_allowed() {
     // Unsecured JWT (RFC 7518 §3.6, `alg: none`): empty signature segment.
     let token = "eyJhbGciOiJub25lIn0.eyJmb28iOiJiYXIifQ.";
-    let JWToken::Jws(t) = parse_token(token).unwrap() else {
-        panic!("expected Jws")
-    };
+    let t = parse_token(token).unwrap().expect_jws();
     assert_eq!(t.body["foo"], "bar");
     assert!(t.signature.is_empty());
 }
@@ -98,9 +92,7 @@ fn empty_signature_segment_is_allowed() {
 fn empty_encrypted_key_segment_is_allowed() {
     // `dir` JWE (RFC 7518 §4.5): the encrypted key is an empty octet sequence.
     let token = "eyJhbGciOiJkaXIiLCJlbmMiOiJBMTI4R0NNIn0..VvWKimYzMS9Z9MkX.uO-BF7wDC-g6L5h4DUa1iim2cTCvCFDW._cE8ch4ES_mGc3YtpnEWJA";
-    let JWToken::Jwe(j) = parse_token(token).unwrap() else {
-        panic!("expected Jwe")
-    };
+    let j = parse_token(token).unwrap().expect_jwe();
     assert!(j.key_encrypted.is_empty());
     assert_eq!(j.ciphertext.len(), 24);
 }
@@ -167,11 +159,21 @@ fn shape_grammar_rejects_prefix_matches() {
 #[test]
 fn jwe_token_carries_raw_form_and_derives_aad() {
     let token = TEST_JWE.trim();
-    let JWToken::Jwe(j) = parse_token(token).unwrap() else {
-        panic!("expected Jwe")
-    };
+    let j = parse_token(token).unwrap().expect_jwe();
     // The compact form round-trips verbatim (the empty `dir` key segment
     // included), and the AAD is derived from its first segment.
     assert_eq!(j.raw(), token);
     assert_eq!(j.aad(), token.split('.').next().unwrap().as_bytes());
+}
+
+#[test]
+#[should_panic(expected = "expected a JWS token, got Jwe")]
+fn expect_jws_rejects_a_jwe() {
+    parse_token(TEST_JWE.trim()).unwrap().expect_jws();
+}
+
+#[test]
+#[should_panic(expected = "expected a JWE token, got Jws")]
+fn expect_jwe_rejects_a_jws() {
+    parse_token(TEST_JWS).unwrap().expect_jwe();
 }
