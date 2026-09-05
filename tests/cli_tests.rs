@@ -370,3 +370,31 @@ fn test_jwe_without_key_shows_placeholder() {
             "Detected a JWE token but no private key was provided",
         ));
 }
+
+#[test]
+fn test_decryption_errors_print_in_display_form() {
+    // Regression test: decryption errors used to escape main via `?` and be
+    // printed by the Termination impl in Debug form, e.g.
+    // `Error: Crypto(UnsupportedAlgorithm("A128GCMKW: ..."))`. The CLI now
+    // has a single error boundary printing every error in Display form.
+    let mut cmd = cargo_bin_cmd!("jwtinfo");
+    let key_path = format!(
+        "{}/src/jwe/tests/fixtures/gcmkw_kek.key",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    let token = include_str!("../src/jwe/tests/fixtures/gcmkw_token.txt");
+    cmd.arg("--key")
+        .arg(key_path)
+        .arg(token.trim())
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains(
+            "Error: Unsupported algorithm: A128GCMKW",
+        ))
+        .stderr(predicate::str::contains("known limitation"))
+        .stderr(
+            predicate::str::contains("Crypto(")
+                .and(predicate::str::contains("UnsupportedAlgorithm("))
+                .not(),
+        );
+}

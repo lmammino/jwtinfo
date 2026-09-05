@@ -14,7 +14,20 @@ use std::{
 };
 
 #[doc(hidden)]
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() {
+    if let Err(e) = run() {
+        eprintln!("Error: {}", e);
+        // Exit directly rather than returning the error from a Result-typed
+        // main: the Termination impl would print it a second time, in Debug
+        // form. This is the single error boundary of the CLI: every error is
+        // reported once, in Display form.
+        std::process::exit(1);
+    }
+}
+
+/// Runs the CLI, so that every error flows through a single `Display`-form
+/// report.
+fn run() -> Result<(), Box<dyn Error>> {
     let mut matches = Command::new("jwtinfo")
         .version(env!("CARGO_PKG_VERSION"))
         .about("Shows information about a JWT (JSON Web Token)")
@@ -95,12 +108,6 @@ fn main() -> Result<(), Box<dyn Error>> {
                 Ok(())
             }
         }
-        Err(e) => {
-            eprintln!("Error: {}", e);
-            // The error has already been reported: exit directly instead of
-            // returning it from `main`, which would make the runtime print it
-            // a second time (in Debug form).
-            std::process::exit(1);
-        }
+        Err(e) => Err(e.into()),
     }
 }
