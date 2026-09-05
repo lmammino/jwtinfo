@@ -49,14 +49,25 @@ impl JweToken {
     ///
     /// The input must be a grammar-validated 5-segment JWE (see
     /// [`crate::jw_parser::parse_token`]): biscuit splits it once and every
-    /// part is derived from that split.
+    /// part is derived from that split. Malformed inputs are rejected with
+    /// the same classification `parse_token` would report for them.
     ///
     /// # Errors
     ///
-    /// Returns [`JwtParseError::InvalidSegment`] when a segment cannot be
-    /// base64url-decoded or the header is not valid UTF-8.
+    /// Returns [`JwtParseError::WrongPartCount`] when the input does not
+    /// split into exactly five segments, and [`JwtParseError::InvalidSegment`]
+    /// when the header segment is empty, a segment cannot be
+    /// base64url-decoded, or the header is not valid UTF-8.
     pub fn new(raw: &str) -> Result<Self, JwtParseError> {
         let compact = Compact::decode(raw);
+        if compact.len() != 5 {
+            return Err(JwtParseError::WrongPartCount {
+                found: compact.len(),
+            });
+        }
+        if compact.parts[0].is_empty() {
+            return Err(JwtParseError::InvalidSegment);
+        }
         let invalid = |_| JwtParseError::InvalidSegment;
         let header = String::from_utf8(compact.part::<Vec<u8>>(0).map_err(invalid)?)
             .map_err(|_| JwtParseError::InvalidSegment)?;

@@ -1,7 +1,8 @@
+use crate::jw_error::JwtParseError;
 use crate::jw_parser::parse_jwe;
 use crate::jwe::decrypt_jwe;
 use crate::jwe::handle_jwe;
-use crate::jwe::jwe_handler::JweHeader;
+use crate::jwe::jwe_handler::{JweHeader, JweToken};
 
 const EXAMPLE_JWE: &str = include_str!("tests/fixtures/simple_token.txt");
 const EXAMPLE_JWE_KEY: &[u8] = include_bytes!("tests/fixtures/priv_simple_token.pem");
@@ -101,4 +102,24 @@ fn assert_handle_jwe_gcmkw_with_rfc7518_params_reports_limitation() {
     assert!(msg.contains("A128GCMKW"));
     assert!(msg.contains("RFC 7518"));
     assert!(msg.contains("known limitation"));
+}
+
+#[test]
+fn assert_jwe_token_new_enforces_the_input_contract() {
+    // The grammar guarantees a 5-segment shape on the parse_token path;
+    // direct callers of JweToken::new must get the same classification
+    // parse_token would report, not a silently truncated token.
+    // 6 segments: the sixth would previously be ignored.
+    let err = JweToken::new("e30.e30.e30.e30.e30.bXk").unwrap_err();
+    assert!(matches!(err, JwtParseError::WrongPartCount { found: 6 }));
+    // 4 segments: previously a swallowed "Out of bounds" as InvalidSegment.
+    let err = JweToken::new("e30.e30.e30.e30").unwrap_err();
+    assert!(matches!(err, JwtParseError::WrongPartCount { found: 4 }));
+    // The empty string splits as a single (empty) segment.
+    let err = JweToken::new("").unwrap_err();
+    assert!(matches!(err, JwtParseError::WrongPartCount { found: 1 }));
+    // Empty header segment: previously a token with header="" and aad=[]
+    // was built successfully.
+    let err = JweToken::new(".e30.e30.e30.e30").unwrap_err();
+    assert!(matches!(err, JwtParseError::InvalidSegment));
 }
