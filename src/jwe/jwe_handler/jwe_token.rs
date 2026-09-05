@@ -15,7 +15,7 @@ pub struct JweHeader {
     /// Content type; `JWT` when the plaintext payload is a nested JWT.
     pub cty: Option<String>,
 
-    /// Any additional unprotected/unknown header members.
+    /// Additional protected header members, including unsupported extensions.
     #[serde(flatten)]
     pub extra: HashMap<String, Value>,
 }

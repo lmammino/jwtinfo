@@ -150,7 +150,7 @@ Files of exactly 16, 24, or 32 bytes are always treated as raw symmetric
 keys, without trimming or interpreting their bytes as text. Longer files
 are checked for PEM, JWK, and DER encodings.
 
-Any format works for any algorithm: the key material is parsed once and matched
+The decoded key material is matched
 against the token's `alg` (an RSA private key for `RSA-OAEP`/`RSA-OAEP-256`, a
 symmetric key for `dir`, `AES-KW` and `GCMKW`).
 For `dir`, the key file must contain the raw content-encryption key (CEK) bytes;
@@ -167,6 +167,7 @@ The display flags (`--header`, `--full`, `--pretty`) apply to whichever token is
 - **JWS token**: `--header` shows the header, `--full` shows `{header, claims}`.
 - **JWE with a plaintext (non-JWT) payload**: `--header` shows the JWE header, `--full` shows `{header, payload}`. Without any flag the raw plaintext is printed.
 - **JWE wrapping a nested JWT** (via the `cty: "JWT"` header): `--header` shows both headers as `{jwe_header, jws_header}`, `--full` shows `{jwe_header, jws_header, claims}`.
+- Nested display expects a JWS payload. A JWE inside a JWE is not recursively decrypted and produces an explicit token-type error.
 - **`--key` on a JWS token**: a warning is printed on stderr and the flag is ignored, but the JWS is still decoded normally.
 
 ## Install

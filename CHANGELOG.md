@@ -21,7 +21,7 @@ changes for library users.
   - Key management algorithms (`alg`): `dir`, `RSA-OAEP`, `RSA-OAEP-256`,
     `A128KW`, `A192KW`, `A256KW`.
   - Content encryption algorithms (`enc`): `A128GCM`, `A256GCM`.
-  - Key formats (auto-detected, any format works for any algorithm): RSA
+  - Key formats (auto-detected and matched to the algorithm): RSA
     private keys (PEM or DER, PKCS#1 or PKCS#8, or a JWK), symmetric keys
     (raw 16/24/32-byte file or `oct` JWK).
 - JWE tokens provided without a key print a placeholder body asking for
@@ -35,6 +35,21 @@ changes for library users.
   The `base64` dependency is gone.
 - Empty signature segments (unsecured JWTs, `alg: none`) and empty
   encrypted-key segments (`dir` JWEs) parse correctly.
+
+### Fixed
+
+- AES-KW validates the wrapped and unwrapped CEK lengths. An eight-byte
+  integrity register alone can no longer become an all-zero CEK, and short
+  CEKs are no longer padded with zeros.
+- AES-KW requires a KEK of the size declared by `alg` (16/24/32 bytes for
+  `A128KW`/`A192KW`/`A256KW`).
+- Decryption validates GCM IV/tag lengths before either backend combines
+  ciphertext and tag, and requires an empty encrypted-key segment for `dir`.
+- Raw key files of exactly 16/24/32 bytes take precedence over format
+  detection, preserving arbitrary bytes including JSON/PEM-like prefixes.
+- Every decryption backend explicitly rejects unsupported `zip` and `crit`
+  headers. Inspection without a key remains available.
+- JWE header JSON errors retain their cause and header context.
 
 ### Deprecated
 
@@ -53,7 +68,6 @@ changes for library users.
   encrypted placeholders are rendered by `TokenOutput::EncryptedJwe`.
 - `jw_output::stringify` takes `(TokenOutput, DisplayOptions)`. The explicit
   borrowed output enum replaces `TokenContent` and `Output`.
-
 - The `jwt` module is renamed `jws`; `jwt::Token` is now `jws::JwsToken`.
 - New entry point `jw_parser::parse_token` returns the `JWToken` enum
   (`Jws(JwsToken)` | `Jwe(JweToken)`). `jws::parse` and
@@ -64,13 +78,13 @@ changes for library users.
   (`String`) instead of `base64::DecodeError`. Two observable consequences:
   the `From<base64::DecodeError>` conversion is gone (downstream `?` breaks),
   and the variant is no longer an error `source()`.
-- `jwe::JweToken` is constructed from the raw compact string
+- `jwe::jwe_handler::JweToken` is constructed from the raw compact string
   (`JweToken::new(&str) -> Result<_, JwtParseError>`), enforces the 5-segment
   shape (rejecting non-5-segment inputs with `WrongPartCount` and empty header
   segments with `InvalidSegment`), and has private fields with read-only
   accessors: struct literals, field mutation, and exhaustive destructuring
-  no longer compile. `aad` is a method
-  (derived from the first raw segment) instead of a field, and `raw()` returns
+  no longer compile. `aad` is a method (derived from the first raw segment)
+  instead of a field, and `raw()` returns
   a `String`.
 - `jwe::decrypt_jwe` takes the parsed token only:
   `decrypt_jwe(&JweToken, Option<Vec<u8>>)`.
@@ -90,9 +104,16 @@ changes for library users.
   the untrimmed string was forwarded to biscuit and failed with a cryptic
   `invalid symbol` decode error.
 - All CLI errors are reported once, in `Display` form; previously decryption
-  errors leaked `Debug` output and parse errors could print twice.
+  errors leaked `Debug` output. Malformed JWE headers now include the JSON
+  cause instead of the generic "not serialized error" message.
+- Decryption rejects malformed structures and unsupported header semantics
+  listed under Fixed, even where earlier implementations returned plaintext.
 
 ### Known limitations
+
+- Compression (`zip`) and critical extensions (`crit`) are unsupported.
+- Nested encrypted payloads (`JWE` inside `JWE`) are not recursively
+  decrypted; a payload marked `cty: "JWT"` must be a JWS for nested display.
 
 - GCMKW (`A128GCMKW`/`A256GCMKW`) decryption is delegated to biscuit, which
   expects the GCMKW `iv`/`tag` protected-header parameters as JSON byte
