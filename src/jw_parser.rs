@@ -2,7 +2,6 @@ use biscuit::Compact;
 use serde_json::Value;
 use winnow::{
     combinator::{alt, eof, terminated},
-    error::{StrContext, StrContextValue},
     token::take_while,
     Parser,
 };
@@ -27,11 +26,7 @@ fn is_base64url_char(c: char) -> bool {
 
 /// A non-empty Base64url segment (RFC 7515 §2).
 fn b64url<'s>(input: &mut &'s str) -> winnow::Result<&'s str> {
-    take_while(1.., is_base64url_char)
-        .context(StrContext::Expected(StrContextValue::Description(
-            "base64url segment",
-        )))
-        .parse_next(input)
+    take_while(1.., is_base64url_char).parse_next(input)
 }
 
 /// A Base64url segment that may be empty. Required for the unsecured-JWT
@@ -39,11 +34,7 @@ fn b64url<'s>(input: &mut &'s str) -> winnow::Result<&'s str> {
 /// (RFC 7518 §4.5); also used for the JWE iv/ciphertext/tag segments, which
 /// are validated by the content-encryption layer rather than the grammar.
 fn b64url_or_empty<'s>(input: &mut &'s str) -> winnow::Result<&'s str> {
-    take_while(0.., is_base64url_char)
-        .context(StrContext::Expected(StrContextValue::Description(
-            "base64url segment (possibly empty)",
-        )))
-        .parse_next(input)
+    take_while(0.., is_base64url_char).parse_next(input)
 }
 
 /// Compact token classification. The caller already owns the input; the
@@ -61,7 +52,6 @@ enum Shape {
 fn jws_shape(input: &mut &str) -> winnow::Result<Shape> {
     (b64url, ".", b64url_or_empty, ".", b64url_or_empty)
         .value(Shape::Jws)
-        .context(StrContext::Label("JWS"))
         .parse_next(input)
 }
 
@@ -80,7 +70,6 @@ fn jwe_shape(input: &mut &str) -> winnow::Result<Shape> {
         b64url_or_empty, // authentication tag
     )
         .value(Shape::Jwe)
-        .context(StrContext::Label("JWE"))
         .parse_next(input)
 }
 
