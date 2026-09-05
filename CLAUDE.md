@@ -10,7 +10,7 @@ jwtinfo is a Rust command-line tool and library for parsing JWT (JSON Web Tokens
 
 - **Binary entry point**: `src/cli.rs` - CLI application using clap for argument parsing
 - **Library entry point**: `src/main.rs` - Exposes the public API
-- **Token parsing**: `src/jw_parser.rs` - winnow grammar that classifies JWS (3 segments) vs JWE (5 segments); biscuit (`Compact::decode`) splits the validated string once and decodes the parts
+- **Token parsing**: `src/jw_parser.rs` - winnow checks the compact alphabet and classifies JWS (3 segments) vs JWE (5 segments); biscuit decodes the parts. Decryption enforces algorithm-specific invariants.
 - **JWS types/logic**: `src/jws.rs` - `JwsToken`, `parse()`, `FromStr`
 - **JWE decryption**: `src/jwe.rs` + `src/jwe/jwe_handler/` - decryption and `DecryptedJwe`
   - `key_loader.rs` - loads keys from PEM/DER/JWK/raw bytes into a `LoadedKey` (symmetric bytes or RSA private key)
@@ -91,7 +91,7 @@ The `JwsToken` struct in `src/jws.rs` contains:
 
 - `parse_token(&str) -> Result<JWToken, JwtParseError>` - entry point; an alt-of-shapes winnow grammar classifies the token as JWS (3 segments) or JWE (5 segments)
 - Leaf parsers: `b64url` (non-empty segment) and `b64url_or_empty` (unsecured-JWT signature, `dir` key, and the JWE iv/ciphertext/tag segments)
-- `Shape` enum - grammar output; each variant holds the full token string, biscuit then splits it once (`Compact::decode`) and base64url-decodes the parts
+- `Shape` enum - grammar output identifying JWS or JWE; the caller retains the input and biscuit decodes its parts
 - `classify(&str)` - fallback error mapping (`InvalidSegment` vs `WrongPartCount`) when both shapes fail
 - `JWToken` enum: `Jws(JwsToken)` | `Jwe(JweToken)`
 - `parse_jwe(&str) -> Result<JweToken, JwtParseError>` - convenience wrapper
@@ -121,4 +121,3 @@ Error hierarchy in `src/jw_error.rs`:
 - `--pretty` flag for formatted JSON output
 - `--key` flag to decrypt JWE tokens; on a JWS token it warns but continues
 - For a nested JWE->JWS token (with `--key`), `--header`/`--full` include both the outer `jwe_header` and the inner `jws_header`
-

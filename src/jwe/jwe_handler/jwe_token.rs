@@ -22,15 +22,11 @@ pub struct JweHeader {
 
 /// A parsed (but not yet decrypted) JWE token.
 ///
-/// The single source of truth is biscuit's [`Compact`]: a one-shot split of
-/// the raw token string into its five base64url segments. Every part the
-/// decryptors need is derived from it — the decoded segments for the manual
-/// paths (RSA-OAEP, AES-KW), the raw protected-header segment as the AAD,
-/// and the parts themselves for the biscuit path (`dir`/GCMKW), which
-/// consumes them without re-parsing any string. On that biscuit path the
-/// segments are base64url-decoded twice — once eagerly here, once inside
-/// biscuit's decrypt — the price of delegating that path; the token string
-/// itself is still split exactly once.
+/// The original compact parts and their decoded values are kept together
+/// and cannot be mutated. Manual decryptors use the decoded values and the
+/// original protected header as AAD; biscuit consumes the compact parts.
+/// Biscuit decodes those parts again internally. This representation keeps
+/// both backends consistent; it does not promise a particular scan count.
 #[derive(Debug, PartialEq, Eq)]
 pub struct JweToken {
     /// biscuit's split of the compact serialization: the five raw segments.
@@ -76,10 +72,10 @@ impl JweToken {
 
     /// Instantiates a `JweToken` from the raw compact string alone.
     ///
-    /// The input must be a grammar-validated 5-segment JWE (see
-    /// [`crate::jw_parser::parse_token`]): biscuit splits it once and every
-    /// part is derived from that split. Malformed inputs are rejected with
-    /// the same classification `parse_token` would report for them.
+    /// Checks the five-part shape and decodes each segment. Call
+    /// [`crate::jw_parser::parse_token`] for the full compact grammar and
+    /// surrounding-whitespace handling. Algorithm-specific checks happen
+    /// during decryption.
     ///
     /// # Errors
     ///

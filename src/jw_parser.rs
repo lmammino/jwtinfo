@@ -46,31 +46,28 @@ fn b64url_or_empty<'s>(input: &mut &'s str) -> winnow::Result<&'s str> {
         .parse_next(input)
 }
 
-/// The syntactic shape of a token, mirroring the RFC compact-serialization
-/// ABNF. The variant payload is the *whole* token string: the grammar's job
-/// is validation and classification, and the segment boundaries are left to
-/// biscuit (`Compact::decode`), which splits the validated string once.
+/// Compact token classification. The caller already owns the input; the
+/// grammar only needs to tell the decoder which shape it validated.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Shape<'s> {
+enum Shape {
     /// A 3-segment JWS (header.payload.signature).
-    Jws(&'s str),
+    Jws,
     /// A 5-segment JWE (header.encrypted-key.iv.ciphertext.tag).
-    Jwe(&'s str),
+    Jwe,
 }
 
 /// `JWS-Compact = BASE64URL(header) '.' BASE64URL(payload) '.' BASE64URL(signature)`
 /// where the signature segment is empty for unsecured JWTs (RFC 7518 §3.6).
-fn jws_shape<'s>(input: &mut &'s str) -> winnow::Result<Shape<'s>> {
+fn jws_shape(input: &mut &str) -> winnow::Result<Shape> {
     (b64url, ".", b64url_or_empty, ".", b64url_or_empty)
-        .take()
-        .map(Shape::Jws)
+        .value(Shape::Jws)
         .context(StrContext::Label("JWS"))
         .parse_next(input)
 }
 
 /// `JWE-Compact = BASE64URL(header) '.' BASE64URL(encrypted key) '.' ...`
 /// where the encrypted-key segment is empty for `dir` (RFC 7518 §4.5).
-fn jwe_shape<'s>(input: &mut &'s str) -> winnow::Result<Shape<'s>> {
+fn jwe_shape(input: &mut &str) -> winnow::Result<Shape> {
     (
         b64url,
         ".",
@@ -82,8 +79,7 @@ fn jwe_shape<'s>(input: &mut &'s str) -> winnow::Result<Shape<'s>> {
         ".",
         b64url_or_empty, // authentication tag
     )
-        .take()
-        .map(Shape::Jwe)
+        .value(Shape::Jwe)
         .context(StrContext::Label("JWE"))
         .parse_next(input)
 }
@@ -138,10 +134,9 @@ fn decode_jwe(raw: &str) -> Result<JWToken, JwtParseError> {
 
 /// Parses a JWS or JWE token from a string.
 ///
-/// The token is validated and classified by a grammar mirroring the RFC
-/// compact-serialization ABNF — an alternation of the 3-segment JWS shape
-/// and the 5-segment JWE shape, anchored at the end of input — and biscuit
-/// then splits the validated string once and decodes its parts.
+/// The grammar checks the compact token's alphabet and 3/5-segment shape;
+/// biscuit decodes the segments. Algorithm-specific JWE validation happens
+/// during decryption. This parser does not verify JWS signatures or claims.
 #[deprecated(
     since = "0.7.0",
     note = "jwtinfo is being repositioned as a CLI tool and its parsing API is in maintenance mode; \
@@ -156,8 +151,8 @@ pub fn parse_token(token_str: &str) -> Result<JWToken, JwtParseError> {
         .parse_next(&mut input)
         .map_err(|_| classify(raw))?;
     match shape {
-        Shape::Jws(raw) => decode_jws(raw),
-        Shape::Jwe(raw) => decode_jwe(raw),
+        Shape::Jws => decode_jws(raw),
+        Shape::Jwe => decode_jwe(raw),
     }
 }
 

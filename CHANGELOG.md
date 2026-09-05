@@ -29,10 +29,9 @@ changes for library users.
 
 ### Changed
 
-- Token parsing is now grammar-based: winnow mirrors the RFC
-  compact-serialization ABNF (an alternation of the 3-segment JWS shape and
-  the 5-segment JWE shape, with a per-position empty-segment policy), and
-  biscuit splits the validated string once and base64url-decodes the parts.
+- Token parsing is now grammar-based: winnow checks the compact alphabet and
+  distinguishes the 3-segment JWS and 5-segment JWE shapes; biscuit decodes
+  the parts. Algorithm-specific JWE validation happens during decryption.
   The `base64` dependency is gone.
 - Empty signature segments (unsecured JWTs, `alg: none`) and empty
   encrypted-key segments (`dir` JWEs) parse correctly.
