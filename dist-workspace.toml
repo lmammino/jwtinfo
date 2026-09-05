@@ -4,9 +4,13 @@ members = ["cargo:."]
 # Config for 'dist'
 [dist]
 # The preferred dist version to use in CI (Cargo.toml SemVer syntax)
-cargo-dist-version = "0.30.0"
+cargo-dist-version = "0.32.0"
 # CI backends to support
 ci = "github"
+# Install cargo-xwin from its main branch for Windows ARM64 builds. The latest
+# PyPI release passes clang-cl flags to clang when compiling ring; upstream's
+# main branch contains the compatibility fix.
+github-build-setup = "dist-build-setup.yml"
 # The installers to generate for each app
 installers = ["shell", "powershell", "npm", "homebrew"]
 # Target platforms to build apps for (Rust target-triple syntax)

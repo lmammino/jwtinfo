@@ -1,0 +1,6 @@
+- name: Install fixed cargo-xwin for Windows ARM64
+  if: ${{ matrix.container && contains(join(matrix.targets, ' '), 'aarch64-pc-windows-msvc') }}
+  run: |
+    apt-get update
+    apt-get install --yes python3-pip
+    pip3 install --upgrade git+https://github.com/rust-cross/cargo-xwin.git
