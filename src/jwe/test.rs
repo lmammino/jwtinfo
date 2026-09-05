@@ -82,7 +82,7 @@ fn aes_kw_rejects_empty_and_short_unwrapped_keys() {
 fn assert_parse_jwe_header_fields() {
     let token = EXAMPLE_JWE.trim();
     let parsed = parse_jwe(token).unwrap();
-    let header: JweHeader = serde_json::from_str(&parsed.header).unwrap();
+    let header: JweHeader = serde_json::from_str(parsed.header()).unwrap();
 
     assert_eq!(header.alg, "RSA-OAEP-256");
     assert_eq!(header.enc, "A256GCM");

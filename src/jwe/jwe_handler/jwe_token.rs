@@ -36,18 +36,44 @@ pub struct JweToken {
     /// biscuit's split of the compact serialization: the five raw segments.
     compact: Compact,
     /// The Base64url-decoded protected header, as a JSON string.
-    pub header: String,
+    header: String,
     /// The encrypted content-encryption key (empty for `dir`).
-    pub key_encrypted: Vec<u8>,
+    key_encrypted: Vec<u8>,
     /// The initialization vector.
-    pub iv: Vec<u8>,
+    iv: Vec<u8>,
     /// The encrypted ciphertext.
-    pub ciphertext: Vec<u8>,
+    ciphertext: Vec<u8>,
     /// The authentication tag.
-    pub tag: Vec<u8>,
+    tag: Vec<u8>,
 }
 
 impl JweToken {
+    /// The decoded protected header. Parsed token parts are immutable so
+    /// both decryption backends always observe the same authenticated data.
+    pub fn header(&self) -> &str {
+        &self.header
+    }
+
+    /// The wrapped content-encryption key, empty for `dir`.
+    pub fn key_encrypted(&self) -> &[u8] {
+        &self.key_encrypted
+    }
+
+    /// The initialization vector.
+    pub fn iv(&self) -> &[u8] {
+        &self.iv
+    }
+
+    /// The encrypted payload.
+    pub fn ciphertext(&self) -> &[u8] {
+        &self.ciphertext
+    }
+
+    /// The content authentication tag.
+    pub fn tag(&self) -> &[u8] {
+        &self.tag
+    }
+
     /// Instantiates a `JweToken` from the raw compact string alone.
     ///
     /// The input must be a grammar-validated 5-segment JWE (see

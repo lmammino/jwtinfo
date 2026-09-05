@@ -62,8 +62,9 @@ changes for library users.
 - `jwe::JweToken` is constructed from the raw compact string
   (`JweToken::new(&str) -> Result<_, JwtParseError>`), enforces the 5-segment
   shape (rejecting non-5-segment inputs with `WrongPartCount` and empty header
-  segments with `InvalidSegment`), and contains a private field: struct
-  literals and exhaustive destructuring no longer compile. `aad` is a method
+  segments with `InvalidSegment`), and has private fields with read-only
+  accessors: struct literals, field mutation, and exhaustive destructuring
+  no longer compile. `aad` is a method
   (derived from the first raw segment) instead of a field, and `raw()` returns
   a `String`.
 - `jwe::decrypt_jwe` takes the parsed token only:

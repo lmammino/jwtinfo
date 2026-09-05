@@ -117,7 +117,7 @@ pub fn parse<T: AsRef<str>>(token: T) -> Result<JwsToken, JwtParseError> {
     match parse_token(token)? {
         JWToken::Jws(t) => Ok(t),
         JWToken::Jwe(jwe) => {
-            let header: Value = serde_json::from_str(&jwe.header)
+            let header: Value = serde_json::from_str(jwe.header())
                 .map_err(|e| JwtParseError::InvalidHeader(ParseError::InvalidJson(e)))?;
             Ok(jwe_placeholder(header))
         }

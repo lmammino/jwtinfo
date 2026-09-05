@@ -50,7 +50,7 @@ pub fn handle_jwe(token: &str, key: Option<Vec<u8>>) -> Result<DecryptedJwe, Jwe
             for library JWT parsing, use biscuit or some other JWT library (check https://jwt.io for suggestions)"
 )]
 pub fn decrypt_jwe(jwe_token: &JweToken, key: Option<Vec<u8>>) -> Result<DecryptedJwe, JweError> {
-    let jwe_header: JweHeader = serde_json::from_str(&jwe_token.header)
+    let jwe_header: JweHeader = serde_json::from_str(jwe_token.header())
         .map_err(|e| JwtParseError::InvalidHeader(ParseError::InvalidJson(e)))?;
     let is_jwt_body = jwe_header
         .cty
@@ -72,14 +72,14 @@ pub fn decrypt_jwe(jwe_token: &JweToken, key: Option<Vec<u8>>) -> Result<Decrypt
     // Validate JOSE segment boundaries before either crypto backend joins
     // ciphertext and tag. Backend authentication alone cannot check them.
     if matches!(enc, "A128GCM" | "A256GCM") {
-        if jwe_token.iv.len() != 12 {
+        if jwe_token.iv().len() != 12 {
             return Err(JweCryptoError::InvalidIvLength.into());
         }
-        if jwe_token.tag.len() != 16 {
-            return Err(JweCryptoError::InvalidTagLength(jwe_token.tag.len()).into());
+        if jwe_token.tag().len() != 16 {
+            return Err(JweCryptoError::InvalidTagLength(jwe_token.tag().len()).into());
         }
     }
-    if alg == "dir" && !jwe_token.key_encrypted.is_empty() {
+    if alg == "dir" && !jwe_token.key_encrypted().is_empty() {
         return Err(JweCryptoError::NonEmptyDirectKey.into());
     }
 
@@ -111,13 +111,13 @@ pub fn decrypt_jwe(jwe_token: &JweToken, key: Option<Vec<u8>>) -> Result<Decrypt
             // biscuit does not implement RSA key management: use the `rsa`
             // crate to unwrap the CEK, then decrypt the content with AES-GCM.
             let rsa_key = loaded.into_rsa(alg)?;
-            let cek = decryptor::decrypt_rsa_oaep(&rsa_key, &jwe_token.key_encrypted, alg)?;
+            let cek = decryptor::decrypt_rsa_oaep(&rsa_key, jwe_token.key_encrypted(), alg)?;
             decryptor::decrypt_gcm_content(
                 &cek,
                 jwe_token.aad(),
-                &jwe_token.iv,
-                &jwe_token.ciphertext,
-                &jwe_token.tag,
+                jwe_token.iv(),
+                jwe_token.ciphertext(),
+                jwe_token.tag(),
                 enc,
             )?
         } else if matches!(alg, "A128KW" | "A192KW" | "A256KW") {
@@ -138,10 +138,10 @@ pub fn decrypt_jwe(jwe_token: &JweToken, key: Option<Vec<u8>>) -> Result<Decrypt
             decryptor::decrypt_aes_kw(
                 &kek,
                 jwe_token.aad(),
-                &jwe_token.key_encrypted,
-                &jwe_token.iv,
-                &jwe_token.ciphertext,
-                &jwe_token.tag,
+                jwe_token.key_encrypted(),
+                jwe_token.iv(),
+                jwe_token.ciphertext(),
+                jwe_token.tag(),
                 enc,
             )?
         } else {

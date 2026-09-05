@@ -16,9 +16,9 @@ fn jws_3_parts_produces_jws_token() {
 #[test]
 fn jwe_5_parts_produces_jwe_token() {
     let j = parse_token(TEST_JWE.trim()).unwrap().expect_jwe();
-    assert!(j.header.contains("A256GCM"));
-    assert_eq!(j.iv.len(), 12);
-    assert_eq!(j.tag.len(), 16);
+    assert!(j.header().contains("A256GCM"));
+    assert_eq!(j.iv().len(), 12);
+    assert_eq!(j.tag().len(), 16);
 }
 
 #[test]
@@ -93,8 +93,8 @@ fn empty_encrypted_key_segment_is_allowed() {
     // `dir` JWE (RFC 7518 §4.5): the encrypted key is an empty octet sequence.
     let token = "eyJhbGciOiJkaXIiLCJlbmMiOiJBMTI4R0NNIn0..VvWKimYzMS9Z9MkX.uO-BF7wDC-g6L5h4DUa1iim2cTCvCFDW._cE8ch4ES_mGc3YtpnEWJA";
     let j = parse_token(token).unwrap().expect_jwe();
-    assert!(j.key_encrypted.is_empty());
-    assert_eq!(j.ciphertext.len(), 24);
+    assert!(j.key_encrypted().is_empty());
+    assert_eq!(j.ciphertext().len(), 24);
 }
 
 #[test]
