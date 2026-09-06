@@ -17,8 +17,10 @@ release manually or running `cargo publish` locally is not the normal path.
 4. Wait for CI on the exact `main` commit to pass. The tag-triggered release
    workflow does not depend on the separate Rust test workflow.
 5. Confirm the publishing credentials are available: `CARGO_TOKEN` for
-   crates.io, `NPM_TOKEN` for npm, and `HOMEBREW_TAP_TOKEN` for
-   `lmammino/homebrew-tap`. GitHub release operations use `GITHUB_TOKEN`.
+   crates.io and `HOMEBREW_TAP_TOKEN` for `lmammino/homebrew-tap`. npm uses
+   trusted publishing through GitHub Actions OIDC, configured in the npm
+   package settings for this repository and `release.yml`; it does not use an
+   `NPM_TOKEN`. GitHub release operations use `GITHUB_TOKEN`.
 
 Local checks, from a clean checkout of the release commit:
 
@@ -63,4 +65,4 @@ assume that publishing an existing package version again is supported.
 
 The release workflow is generated. Change cargo-dist settings in
 `dist-workspace.toml` and regenerate with the pinned cargo-dist version
-(currently 0.30.0) when modifying the release pipeline.
+(currently 0.32.0) when modifying the release pipeline.

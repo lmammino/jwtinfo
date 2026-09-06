@@ -19,6 +19,6 @@ install-path = "CARGO_HOME"
 # A GitHub repo to push Homebrew formulas to
 tap = "lmammino/homebrew-tap"
 # Publish jobs to run in CI
-publish-jobs = ["npm", "homebrew", "./cargo-publish"]
+publish-jobs = ["./npm-publish", "homebrew", "./cargo-publish"]
 # Whether to install an updater program
 install-updater = false
